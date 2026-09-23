@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+
+# EVBattery
+# Raw dataset files
+/original/**/*
+
+# Generated pickle datasets
+/processed/**/*
+
+# Authors' code
+/scripts/authors_code/battery_dataset_neurips23dataset_code/*
+!/scripts/authors_code/battery_dataset_neurips23dataset_code/capacity_estimation/
+
+!/scripts/authors_code/battery_dataset_neurips23dataset_code/data/
+
+!/scripts/authors_code/battery_dataset_neurips23dataset_code/five_fold_utils/
+/scripts/authors_code/battery_dataset_neurips23dataset_code/five_fold_utils/*
+!/scripts/authors_code/battery_dataset_neurips23dataset_code/five_fold_utils/YOUR*.npy
+
+!/scripts/authors_code/battery_dataset_neurips23dataset_code/README.md
+!/scripts/authors_code/battery_dataset_neurips23dataset_code/requirement.txt
+
+# Cached/generated datasets
+/scripts/authors_code/**/capacity_estimation/saved_dataset/
+
+# Model/checkpoint files
+/scripts/authors_code/**/capacity_estimation/*.pt
+/scripts/authors_code/**/capacity_estimation/*.pth
+/scripts/authors_code/**/capacity_estimation/**/*.pt
+/scripts/authors_code/**/capacity_estimation/**/*.pth
+
+# Logs / results generated during experiments
+*.log
+/scripts/authors_code/**/capacity_estimation/results/
+/scripts/authors_code/**/capacity_estimation/output/
+/scripts/authors_code/**/capacity_estimation/outputs/
+
+# Other
+*.pdf
