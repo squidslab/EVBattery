@@ -4,6 +4,8 @@ from glob import glob
 import numpy as np
 from tqdm import tqdm
 
+# Original CapacityDataset class that loads the entire PKL objects into memory.
+
 # class CapacityDataset:
 #     '''
 #     If you want to use another vendor, just switch paths
@@ -59,6 +61,9 @@ from tqdm import tqdm
 #         file = self.battery_dataset[idx]
 #         return file
 
+# This is the updated version of the CapacityDataset class that stores only 
+# the paths to the data files instead of loading the entire PKL objects into memory. 
+# This change helps reduce memory usage, especially when dealing with large datasets.
 class CapacityDataset:
     '''
     If you want to use another vendor, just switch paths
@@ -69,7 +74,7 @@ class CapacityDataset:
     ind_ood_car_dict_path='../five_fold_utils/ind_odd_dict3.npz.npy'
     '''
     def __init__(self, all_car_dict_path='../five_fold_utils/all_car_dict.npz.npy',
-                 ind_ood_car_dict_path='../five_fold_utils/ind_odd_dict2.npz.npy',
+                 ind_ood_car_dict_path='../five_fold_utils/ind_odd_dict1.npz.npy',
                  train=True, fold_num=0):
         self.all_car_dict = np.load(
             all_car_dict_path,
