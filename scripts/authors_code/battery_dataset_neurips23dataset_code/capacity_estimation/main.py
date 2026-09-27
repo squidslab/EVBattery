@@ -18,7 +18,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.ensemble import GradientBoostingRegressor
 from utils import build_loc_net, get_fc_graph_struc
 
-# NOTE: Mia aggiunta per salvare i risultati in un file di testo
+# NOTE: The following function is added to save the results of the model evaluation to a text file.
 # ================================================================
 from pathlib import Path
 
@@ -78,7 +78,6 @@ if __name__ == '__main__':
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
 
-        # NOTE: Mia aggiunta per salvare i risultati in un file di testo
         final_train_loss = None
         final_test_loss = None
 
@@ -118,17 +117,84 @@ if __name__ == '__main__':
             "Final Test Loss": final_test_loss
         })
 
+    # elif args.model == "XGBoost":
+    #     # XGBoost
+    #     train_data_list = [train_dataset.__getitem__(i)[0] for i in range(len(train_dataset))]
+    #     train_labels_list = [train_dataset.__getitem__(i)[1]['capacity'] for i in range(len(train_dataset))]
+    #     train_data = np.array(train_data_list).reshape(len(train_data_list), -1)
+    #     train_labels = np.array(train_labels_list)
+
+    #     test_data_list = [test_dataset.__getitem__(i)[0] for i in range(len(test_dataset))]
+    #     test_labels_list = [test_dataset.__getitem__(i)[1]['capacity'] for i in range(len(test_dataset))]
+    #     test_data = np.array(test_data_list).reshape(len(test_data_list), -1)
+    #     test_labels = np.array(test_labels_list)
+
+    #     print(train_data.shape, test_data.shape)
+
+    #     dtrain = xgb.DMatrix(train_data, label=train_labels)
+    #     dtest = xgb.DMatrix(test_data, label=test_labels)
+
+    #     params = {
+    #         'objective': 'reg:squarederror',
+    #         'eta': 0.1,
+    #         'max_depth': 4,
+    #         'eval_metric': 'rmse'
+    #     }
+
+    #     num_rounds = args.num_epochs
+    #     model = xgb.train(params, dtrain, num_rounds)
+
+    #     train_predictions = model.predict(dtrain)
+    #     test_predictions = model.predict(dtest)
+
+    #     print("Train RMSE:", np.sqrt(np.mean((train_predictions - train_labels) ** 2)))
+    #     print("Test RMSE:", np.sqrt(np.mean((test_predictions - test_labels) ** 2)))
+
+    #     save_results(args.fold_num, args.model, {
+    #         "Train RMSE": np.sqrt(np.mean((train_predictions - train_labels) ** 2)),
+    #         "Test RMSE": np.sqrt(np.mean((test_predictions - test_labels) ** 2))
+    #     })
+
     elif args.model == "XGBoost":
         # XGBoost
-        train_data_list = [train_dataset.__getitem__(i)[0] for i in range(len(train_dataset))]
-        train_labels_list = [train_dataset.__getitem__(i)[1]['capacity'] for i in range(len(train_dataset))]
-        train_data = np.array(train_data_list).reshape(len(train_data_list), -1)
-        train_labels = np.array(train_labels_list)
 
-        test_data_list = [test_dataset.__getitem__(i)[0] for i in range(len(test_dataset))]
-        test_labels_list = [test_dataset.__getitem__(i)[1]['capacity'] for i in range(len(test_dataset))]
-        test_data = np.array(test_data_list).reshape(len(test_data_list), -1)
-        test_labels = np.array(test_labels_list)
+        train_data = np.empty(
+            (len(train_dataset), 128, 8),
+            dtype=np.float32
+        )
+
+        train_labels = np.empty(
+            len(train_dataset),
+            dtype=np.float32
+        )
+
+        for i in range(len(train_dataset)):
+            data, metadata = train_dataset[i]
+
+            train_data[i] = data
+            train_labels[i] = metadata['capacity']
+
+        # Flatten: (N, 128, 8) -> (N, 1024)
+        train_data = train_data.reshape(len(train_dataset), -1)
+
+        test_data = np.empty(
+            (len(test_dataset), 128, 8),
+            dtype=np.float32
+        )
+
+        test_labels = np.empty(
+            len(test_dataset),
+            dtype=np.float32
+        )
+
+        for i in range(len(test_dataset)):
+            data, metadata = test_dataset[i]
+
+            test_data[i] = data
+            test_labels[i] = metadata['capacity']
+
+        # Flatten: (N, 128, 8) -> (N, 1024)
+        test_data = test_data.reshape(len(test_dataset), -1)
 
         print(train_data.shape, test_data.shape)
 
@@ -138,7 +204,7 @@ if __name__ == '__main__':
         params = {
             'objective': 'reg:squarederror',
             'eta': 0.1,
-            'max_depth': 3,
+            'max_depth': 4,
             'eval_metric': 'rmse'
         }
 
@@ -148,8 +214,16 @@ if __name__ == '__main__':
         train_predictions = model.predict(dtrain)
         test_predictions = model.predict(dtest)
 
-        print("Train RMSE:", np.sqrt(np.mean((train_predictions - train_labels) ** 2)))
-        print("Test RMSE:", np.sqrt(np.mean((test_predictions - test_labels) ** 2)))
+        train_rmse = np.sqrt(np.mean((train_predictions - train_labels) ** 2))
+        test_rmse = np.sqrt(np.mean((test_predictions - test_labels) ** 2))
+
+        print("Train RMSE:", train_rmse)
+        print("Test RMSE:", test_rmse)
+
+        save_results(args.fold_num, args.model, {
+            "Train RMSE": train_rmse,
+            "Test RMSE": test_rmse
+        })
 
     elif args.model == "MEAN":
         train_data_list = [train_dataset.__getitem__(i)[0] for i in range(len(train_dataset))]
