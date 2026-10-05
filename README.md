@@ -4,7 +4,7 @@ Repository for the analysis and preprocessing of datasets on the health status o
 
 This project is based on and builds upon the work presented by He et al. in their paper; more information in [*References*](#references-and-license). 
 
-For the sake of readers, a brief summary of the paper is also provided in this README.
+For the sake of readers, a brief summary of the paper is also provided in this README when needed.
 
 
 ---
@@ -20,9 +20,8 @@ For the sake of readers, a brief summary of the paper is also provided in this R
   - [2. Create the Python 3.6 environment](#2-create-the-python-36-environment)
   - [3. Install the dependencies](#3-install-the-dependencies)
 - [Generating the five-fold files](#generating-the-five-fold-files)
-<!-- - [Understanding `five_fold_utils`](#understanding-five_fold_utils) 
+- [Understanding `five_fold_utils`](#understanding-five_fold_utils) 
 - [How the code loads and splits the data](#how-the-code-loads-and-splits-the-data)
-- [Reproducing the five folds](#reproducing-the-five-folds) -->
 - [Running the capacity-estimation code](#running-the-capacity-estimation-code)
 - [Main models](#main-models)
 - [Expected computational cost](#expected-computational-cost)
@@ -40,7 +39,7 @@ The authors benchmark:
 - Random Forest
 - XGBoost
 - MLP
-- Gated CNN (GCNN)
+- Gated CNN
 - LSTM
 
 The current implementation contains all of these branches in `capacity_estimation/main.py`. We will focus on Random Forest, XGBoost and LSTM later in this README.
@@ -60,10 +59,11 @@ The EVBattery dataset was collected from real-world electric vehicles from three
 | `battery_dataset1` | 217 | 31 | 629,121 | 349,741 |
 | `battery_dataset2` | 198 | 1 | 472,829 | 203,207 |
 | `battery_dataset3` | 49 | 16 | 176,327 | 32,974 |
+| Total | 464 | 48 | 1,278,277 | 585,922
 
 The paper states that the capacity labels are real values in approximately the range **28.28–46.23 Ah**.
 
-The complete dataset contains more than 1.2 million charging snippets.
+The complete dataset contains more than 1.2 million charging snippets and working with all these data isn't trivial, as we will see later.
 
 ### Features
 
@@ -84,6 +84,7 @@ The raw public data is stored as pickle (`.pkl`) files.
 
 ---
 To download the .zip with these datasets, see [References](#references-and-license).
+
 
 # Repository structure
 
@@ -266,14 +267,9 @@ python -c "import torch; print(torch.cuda.is_available())"
 If it prints *False*, you have to use the CPU-only setup of this project. Otherwise, you can uncomment the `.cuda()` calls in the **`main.py`**, in order to improve the performance.
 
 
-
 # Generating the five-fold files
 
-***COMING SOON***
-
-<!-- TODO UPDATE WITH NEWER INFO
-
-Before running `capacity_estimation/main.py`, the authors' code must generate the files used for the vehicle/fold split.
+Before running `capacity_estimation/main.py`, the authors' preprocessing code must generate the files used to organize the vehicles and perform the five-fold cross-validation split.
 
 The important files are:
 
@@ -286,64 +282,134 @@ five_fold_utils/
 └── ind_odd_dict3.npz.npy
 ```
 
-The five-fold preprocessing code builds dictionaries that associate vehicle numbers with their charging-snippet files and creates the vehicle lists used for cross-validation.
+These files do not contain the actual charging-snippet arrays.
 
-If these files do not exist, `main.py` will fail when it tries to load:
+Instead, they contain indexing and split information used later by `CapacityDataset`.
 
-```text
-../five_fold_utils/all_car_dict.npz.npy
-../five_fold_utils/ind_odd_dict1.npz.npy
-```
+The actual charging snippets remain stored in the original `.pkl` files.
 
-from inside:
+If these files do not exist, `main.py` will fail when it tries to load any of them.
 
-```text
-capacity_estimation/
-```
 
 # Understanding `five_fold_utils`
 
 ## `all_car_dict.npz.npy`
 
-This dictionary maps a vehicle number to the list of pickle files belonging to that vehicle.
+This dictionary maps each vehicle number to the list of pickle files belonging to that vehicle.
 
-The capacity loader performs essentially:
+During preprocessing, the code reads every `.pkl` file and extracts the vehicle number from its metadata.
 
-```python
-self.all_car_dict = np.load(
-    all_car_dict_path,
-    allow_pickle=True
-).item()
+The dictionary is then built appending each path to the vehicle number.
+
+Conceptually, the resulting structure is:
+
+```text
+dict
+ ├── [vehicle number X]
+ │     ├── PKL path
+ │     ├── PKL path
+ │     └── ...
+ ├── [vehicle number Y]
+ │     ├── PKL path
+ │     └── ...
+ └── ...
 ```
 
-and later accesses:
+For example:
 
 ```python
-self.all_car_dict[each_num]
+all_car_dict[512]
 ```
 
-to find all snippets belonging to a particular vehicle.
+returns the list of `.pkl` files belonging to vehicle `512`.
+
+The global `all_car_dict` contains 464 vehicle IDs, corresponding to the three EVBattery datasets combined.
+
+Therefore, `all_car_dict` is an index from:
+
+```text
+vehicle ID → PKL file paths
+```
+
+It does not contain the actual `128 × 8` charging-snippet arrays.
 
 ## `ind_odd_dict*.npz.npy`
 
-These files contain the vehicle-number lists used for the cross-validation split.
+These dictionaries contain the vehicle-number lists used for the cross-validation split.
 
-The code reads:
+The terminology comes from the authors' code:
 
-```python
-self.ind_car_num_list = ind_ood_car_dict['ind_sorted']
-self.ood_car_num_list = ind_ood_car_dict['ood_sorted']
+```text
+ind → in-distribution
+ood → out-of-distribution
 ```
 
-The names are inherited from the authors' terminology.
+The preprocessing code first separates vehicles according to the label stored in the PKL metadata (corresponding to the anomaly label):
 
-The important point is that these files are **vehicle-level split information**, not the actual battery snippets themselves. 
+```python
+if this_pkl_file[1]['label'] == '00':
+    ind_car_num_list1.add(this_car_number)
+else:
+    ood_car_num_list1.add(this_car_number)
+```
 
+The resulting sets contain unique vehicle numbers rather than individual PKL files.
+
+The vehicle IDs are then converted to lists, sorted, and shuffled:
+
+```python
+random.seed(0)
+
+ind_sorted = sorted(ind_car_num_list1)
+random.shuffle(ind_sorted)
+
+ood_sorted = sorted(ood_car_num_list1)
+random.shuffle(ood_sorted)
+```
+
+`random.seed(0)` initializes Python's pseudo-random number generator with a fixed seed. This makes the shuffle reproducible: running the same preprocessing code again produces the same vehicle ordering.
+
+`sorted()` provides a deterministic starting order before the random shuffle.
+
+The resulting lists are stored as:
+
+```python
+ind_odd_dict = {}
+
+ind_odd_dict["ind_sorted"] = ind_sorted
+ind_odd_dict["ood_sorted"] = ood_sorted
+```
+
+and saved with:
+
+```python
+np.save('../five_fold_utils/ind_odd_dict1.npz', ind_odd_dict)
+```
+
+The files are therefore **vehicle-level split information**, not the actual battery snippets.
+
+The files have the following roles:
+
+```text
+ind_odd_dict1.npz.npy
+    → vehicles from dataset 1
+
+ind_odd_dict2.npz.npy
+    → vehicles from dataset 2
+
+ind_odd_dict3.npz.npy
+    → vehicles from dataset 3
+
+ind_odd_dict.npz.npy
+    → vehicles from all three datasets combined
+```
+
+The global lists are created by combining the three dataset-specific lists.
 
 
 # How the code loads and splits the data
 
-The capacity pipeline works at the **vehicle level** for cross-validation.
+The capacity pipeline performs the cross-validation split at the **vehicle level**, not at the individual charging-snippet level.
 
 `CapacityDataset` loads:
 
@@ -355,79 +421,97 @@ ind_odd_dict*.npz.npy
 and obtains:
 
 ```python
-ind_car_num_list
-ood_car_num_list
+self.ind_car_num_list = ind_ood_car_dict['ind_sorted']
+self.ood_car_num_list = ind_ood_car_dict['ood_sorted']
 ```
 
-For a given fold, the code removes one fifth of the vehicles from each list for testing.
-
-Conceptually:
+For a given fold, one fifth of the IND vehicles and one fifth of the OOD vehicles are assigned to the test set. Conceptually:
 
 ```text
-5 folds
-│
-├── 4/5 vehicles → training
-└── 1/5 vehicles → testing
+IND vehicles
+    │
+    ├── 4/5 → training
+    └── 1/5 → testing
+
+OOD vehicles
+    │
+    ├── 4/5 → training
+    └── 1/5 → testing
 ```
 
-The split is performed separately for the `ind` and `ood` vehicle lists and then combined.
+The two resulting groups are then combined to create the training or test vehicle list.
 
-For the training dataset:
+For the training dataset, the selected fold is excluded:
 
 ```python
-car_number = ...
+car_number = (
+    self.ind_car_num_list[:int(fold_num * len(self.ind_car_num_list) / 5)]
+    + self.ind_car_num_list[int((fold_num + 1) * len(self.ind_car_num_list) / 5):]
+    + self.ood_car_num_list[:int(fold_num * len(self.ood_car_num_list) / 5)]
+    + self.ood_car_num_list[int((fold_num + 1) * len(self.ood_car_num_list) / 5):]
+)
 ```
 
-contains all vehicles except the selected fold.
-
-For the test dataset:
+For the test dataset, only the selected fold is used:
 
 ```python
-car_number = ...
+car_number = (
+    self.ind_car_num_list[
+        int(fold_num * len(self.ind_car_num_list) / 5):
+        int((fold_num + 1) * len(self.ind_car_num_list) / 5)
+    ]
+    +
+    self.ood_car_num_list[
+        int(fold_num * len(self.ood_car_num_list) / 5):
+        int((fold_num + 1) * len(self.ood_car_num_list) / 5)
+    ]
+)
 ```
 
-contains the vehicles belonging to the selected fold.
+Once the vehicle numbers have been selected, `CapacityDataset` uses `all_car_dict` to find the corresponding PKL files:
 
-
-
-
-
-# Reproducing the five folds
-
-For the LSTM baseline:
-
-```bash
-python main.py --fold_num 0 --model LSTMNet --num_epochs 10
-python main.py --fold_num 1 --model LSTMNet --num_epochs 10
-python main.py --fold_num 2 --model LSTMNet --num_epochs 10
-python main.py --fold_num 3 --model LSTMNet --num_epochs 10
-python main.py --fold_num 4 --model LSTMNet --num_epochs 10
+```python
+for each_num in car_number:
+    for each_pkl in self.all_car_dict[each_num]:
+        train1 = torch.load(each_pkl)
 ```
 
-The same procedure can be used for the other models.
+Only snippets whose capacity is different from zero are then added to the dataset used for the estimation problem:
 
-Example:
-
-```bash
-python main.py --fold_num 0 --model MLP --num_epochs 10
+```python
+if train1[1]["capacity"] != 0:
+    self.battery_dataset.append(train1)
 ```
 
-or:
+Therefore, the overall process is:
 
-```bash
-python main.py --fold_num 0 --model GatedCNN --num_epochs 10
+```text
+vehicle IDs
+    │
+    ▼
+fold selection
+    │
+    ▼
+all_car_dict
+    │
+    ▼
+PKL file paths
+    │
+    ▼
+torch.load()
+    │
+    ▼
+charging snippet
+    │
+    ├── data: 128 × 8
+    └── metadata: vehicle, label, capacity, etc.
+    │
+    ▼
+capacity != 0
+    │
+    ▼
+battery_dataset.append()
 ```
-
-or:
-
-```bash
-python main.py --fold_num 0 --model XGBoost --num_epochs 50
-```
-
-
-
--->
-
 
 
 # Running the capacity-estimation code
@@ -528,7 +612,6 @@ If present, the script loads previously serialized datasets from `saved_dataset/
 python main.py --load_saved_dataset
 ```
 
----
 
 # Main models
 
@@ -576,7 +659,6 @@ max_depth    = 4
 ```
 
 
-
 # Expected computational cost
 
 The main bottleneck is data loading and preprocessing.
@@ -600,7 +682,6 @@ and appends every capacity-labeled snippet to the in-memory dataset. The dataset
 On systems with limited RAM, the process may become very slow or the system may run out of memory while loading and preprocessing the data.
 
 If you experience memory-related issues, monitor the system's RAM usage during execution and make sure that sufficient memory is available before running the full pipeline.
-
 
 
 # References and license
