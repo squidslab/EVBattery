@@ -19,6 +19,7 @@
 
 import pickle
 from pathlib import Path
+import numpy as np
 
 # root directory of the project
 PROJECT_DIR = Path(__file__).resolve().parents[2]
@@ -74,11 +75,15 @@ for dataset in DATASETS:
         print("Dtype:", array.dtype)
 
         print("\n=== VALORI ===")
-        print("Prima riga:")
-        print(array[0])
-        print("Ultima riga:")
-        print(array[-1])
+        print("Prima riga: ", array[0])
+        print("Prima riga float 16:", np.float16(array[0]))
+        print("Ultima riga: ", array[-1])
+        print("Ultima riga float 16:", np.float16(array[-1]))
 
         print("\n=== METADATI ===")
         for key, value in metadata.items():
             print(f"{key}: {value}")
+
+        print("\n=== METADATI FLOAT16 ===")
+        print("Mileage (float16):", np.float16(metadata["mileage"]))
+        print("Capacity (float16):", np.float16(metadata["capacity"]))
