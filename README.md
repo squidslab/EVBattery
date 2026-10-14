@@ -663,25 +663,81 @@ max_depth    = 4
 
 The main bottleneck is data loading and preprocessing.
 
-The code iterates through many vehicle-associated `.pkl` files and filters them according to the capacity label.
+The code iterates through vehicle-associated `.pkl` files and filters them according to the capacity label.
 
-On the CPU-only Ryzen 5 3500U machine used during this project, a single fold can take several minutes just to load/process the data before the actual training is complete.
+On the CPU-only AMD Ryzen 5 3500U machine used during this project, loading and preprocessing a single fold can take several minutes before the actual training is complete.
 
-Neural-network training is also significantly slower on CPU than on the NVIDIA GPUs used in the authors' experiments.
+Neural-network training is also significantly slower on a CPU than on the NVIDIA GPUs used in the authors' experiments.
 
-## Very large memory usage
+## Memory requirements: analytical estimate
 
-The capacity loader builds:
+Each charging snippet mainly consists of two components:
+
+1. a numerical array with shape `(128, 8)`, containing 1,024 float values;
+2. a metadata section containing five values: a string, an integer, another string, a float, and a `numpy.float64`.
+
+The following estimate considers all 585,922 snippets with valid capacity labels across the three datasets, as reported in the dataset summary.
+
+### Numerical arrays
+
+The memory required by the numerical arrays depends on the data type used to represent each value:
+
+- `float64`: 8 bytes per value ⟶ 8,192 bytes (8 KiB) per snippet;
+- `float32`: 4 bytes per value ⟶ 4,096 bytes (4 KiB) per snippet;
+- `float16`: 2 bytes per value ⟶ 2,048 bytes (2 KiB) per snippet.
+
+Considering only the vehicle with the largest number of capacity-labeled snippets from each dataset, and assuming that all these snippets are stored simultaneously, the total size is:
+
+| Vehicle | Capacity-labeled snippets | `float64` | `float32` | `float16` |
+|---|---:|---:|---:|---:|
+| `51` | 9,101 | 71.101 MiB | 35.550 MiB | 17.775 MiB |
+| `431` | 5,337 | 41.695 MiB | 20.847 MiB | 10.423 MiB |
+| `521` | 9,060 | 70.781 MiB | 35.390 MiB | 17.695 MiB |
+
+Applying the same calculation to all capacity-labeled snippets in each dataset gives the following estimates:
+
+| Dataset | Capacity-labeled snippets | `float64` | `float32` | `float16` |
+|---|---:|---:|---:|---:|
+| `battery_dataset1` | 349,741 | 2.668 GiB | 1.334 GiB | 0.667 GiB |
+| `battery_dataset2` | 203,207 | 1.550 GiB | 0.775 GiB | 0.388 GiB |
+| `battery_dataset3` | 32,974 | 0.252 GiB | 0.126 GiB | 0.063 GiB |
+| **Total** | **585,922** | **4.470 GiB** | **2.235 GiB** | **1.118 GiB** |
+
+> **Important**: These values represent the **numerical arrays only**. 
+
+They are theoretical estimates obtained by multiplying the number of snippets by the number of values per snippet and the size of each value. 
+
+For example, using `float64`:
+
+```text
+585,922 × 128 × 8 × 8 bytes
+= 4,799,873,024 bytes
+≈ 4.470 GiB
+```
+
+Using `float32` would halve the memory requirements, while `float16` would reduce it to one quarter of the `float64` estimate.
+
+### Additional memory required
+
+The numerical arrays are not the only data stored in each `.pkl` file. The estimates do not account for metadata contained in the pickles, any other Python objects, indices, allocation overhead, or other data used by the program.
+
+In other words, the actual memory requirement is higher than the values reported in the previous table. Keep these factors in mind when running the code on your hardware, otherwise you could run in an "Out of Memory" error.
+
+### Loading strategy
+
+The original implementation of `CapacityDataset` stores the loaded snippets in an in-memory list:
 
 ```python
 self.battery_dataset = []
 ```
 
-and appends every capacity-labeled snippet to the in-memory dataset. The dataset is therefore not streamed one file at a time during training. This can require **substantial RAM**.
+This approach can require substantial RAM because the loaded objects are retained in memory. For this reason, the implementation used in this project has been modified to store just the paths of the `.pkl` files instead of the objects. The actual snippet is loaded when `__getitem__` is called.
 
-On systems with limited RAM, the process may become very slow or the system may run out of memory while loading and preprocessing the data.
+This reduces the need to keep all snippet objects in memory simultaneously, although it introduces repeated file-access and deserialization costs during training and testing.
 
-If you experience memory-related issues, monitor the system's RAM usage during execution and make sure that sufficient memory is available before running the full pipeline.
+Even with this change in the authors' code, some algorithms implemented in `main.py`, such as **XGBoost**, still require all training and test snippets to be loaded into memory simultaneously.
+
+Consequently, the memory estimates above should not be interpreted solely as the theoretical size of all numerical arrays if they were held in memory simultaneously, since this scenario actually occurs in some implementations!
 
 
 # References and license
