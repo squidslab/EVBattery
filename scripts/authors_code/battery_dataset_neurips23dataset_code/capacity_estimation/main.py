@@ -41,8 +41,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch capacity estimation')
     parser.add_argument('--fold_num', type=int, default=0)
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--model', type=str, default='LSTMNet')
-    parser.add_argument('--num_epochs', type=int, default=10)
+    parser.add_argument('--model', type=str, default='XGBoost')
+    parser.add_argument('--num_epochs', type=int, default=50)
     parser.add_argument('--load_saved_dataset', action='store_true')
 
 
@@ -164,10 +164,8 @@ if __name__ == '__main__':
         for i in range(len(train_dataset)):
             data, metadata = train_dataset[i]
 
-            train_data[i] = data
+            train_data[i] = data.reshape(-1)
             train_labels[i] = metadata['capacity']
-
-        train_data = train_data.reshape(len(train_dataset), -1)
 
         dtrain = xgb.DMatrix(train_data, label=train_labels)
 
@@ -201,10 +199,8 @@ if __name__ == '__main__':
         for i in range(len(test_dataset)):
             data, metadata = test_dataset[i]
 
-            test_data[i] = data
+            test_data[i] = data.reshape(-1)
             test_labels[i] = metadata['capacity']
-
-        test_data = test_data.reshape(len(test_dataset), -1)
 
         dtest = xgb.DMatrix(test_data, label=test_labels)
 
@@ -273,10 +269,8 @@ if __name__ == '__main__':
         for i in range(len(train_dataset)):
             data, metadata = train_dataset[i]
 
-            train_data[i] = data
+            train_data[i] = data.reshape(-1)
             train_labels[i] = metadata['capacity']
-
-        train_data = train_data.reshape(len(train_dataset), -1)
 
         test_data = np.empty((len(test_dataset), 1024), dtype=np.float16)
         test_labels = np.empty(len(test_dataset), dtype=np.float32)
@@ -284,10 +278,8 @@ if __name__ == '__main__':
         for i in range(len(test_dataset)):
             data, metadata = test_dataset[i]
 
-            test_data[i] = data
+            test_data[i] = data.reshape(-1)
             test_labels[i] = metadata['capacity']
-
-        test_data = test_data.reshape(len(test_dataset), -1)
 
         model = RandomForestRegressor(n_estimators=10, random_state=0, n_jobs=10, max_depth=4)
 
