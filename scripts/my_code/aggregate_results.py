@@ -68,20 +68,20 @@ def main():
     )
     parser.add_argument(
         "--results-dir",
-        default="RandomForest/feature_sel_5/",
+        default="LSTMNet/feature_sel_5/",
         help="Cartella contenente i file results_fold_*.txt",
     )
     parser.add_argument(
         "--model",
-        # default="LSTMNet",
-        default="XGBoost",
+        default="LSTMNet",
+        # default="XGBoost",
         # default="RandomForest",
         help="Nome del modello da riportare nel riepilogo",
     )
     parser.add_argument(
         "--dataset",
-        # default="ALL BATTERY DATASETS",
-        default="BATTERY DATASET 1",
+        default="ALL BATTERY DATASETS",
+        # default="BATTERY DATASET 1",
         # default="BATTERY DATASET 2",
         help="Nome del dataset da riportare nel riepilogo",
     )
@@ -158,10 +158,14 @@ def main():
         "",
         f"Sampling: {args.sampling}",
         "",
-        f"Feature Selection: {'\n    '.join([f'Feature {i}: {selected_features[i]}' for i in range(len(selected_features))])}",
-        "-" * 40,
-        ""
+        "Feature Selection:",
     ]
+
+    for i, selected_feature in enumerate(selected_features):
+        lines.append(f"    Feature {i}: {FEATURES[selected_feature]}")
+
+    lines.append("-" * 40)
+    lines.append("")
 
     for file_path, value in values:
         fold_match = re.search(r"results_fold_(\d+)", file_path.name)
