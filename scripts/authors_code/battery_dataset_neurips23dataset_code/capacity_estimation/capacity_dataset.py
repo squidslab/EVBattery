@@ -75,7 +75,7 @@ class CapacityDataset:
     '''
     def __init__(self, all_car_dict_path='../five_fold_utils/all_car_dict.npz.npy',
                  ind_ood_car_dict_path='../five_fold_utils/ind_odd_dict1.npz.npy',
-                 train=True, fold_num=0):
+                 train=True, fold_num=0, sampling=100, seed=26):
         self.all_car_dict = np.load(
             all_car_dict_path,
             allow_pickle=True
@@ -111,7 +111,7 @@ class CapacityDataset:
         self.battery_dataset = []
         print('car_number is ', car_number)
         capacity_valid_car_number = []
-        print("Loading data")
+        print("Loading data...")
 
         for each_num in tqdm(car_number):
             for each_pkl in self.all_car_dict[each_num]:
@@ -119,13 +119,26 @@ class CapacityDataset:
                 if train1[1]["capacity"] != 0:
                     self.battery_dataset.append(each_pkl)
                     capacity_valid_car_number.append(train1[1]["car"])
-        print(
-            "unsorted capacity_valid_car_number",
-            len(set(capacity_valid_car_number)),
-            set(capacity_valid_car_number),
-            "capacity data point",
-            len(capacity_valid_car_number)
-        )
+
+        # ===========================================================================
+        # SAMPLING: Randomly sample a percentage of the valid snippets if specified.
+
+        total_valid = len(self.battery_dataset)
+
+        # print("Vehicles with valid capacity:", len(set(capacity_valid_car_number)))
+        # print("Valid snippets before sampling:", total_valid)
+
+        rng = np.random.RandomState(seed)
+
+        if sampling < 100 and total_valid > 0:
+            n_samples = max(1, int(total_valid * sampling / 100))
+            selected_indices = rng.choice(total_valid, size=n_samples, replace=False)
+            self.battery_dataset = [self.battery_dataset[i] for i in selected_indices]
+
+        # print(f"Sampling: {sampling}%")
+        # print(f"Valid snippets after sampling: {len(self.battery_dataset)}")
+
+        # ===========================================================================
 
     def __len__(self):
         return len(self.battery_dataset)

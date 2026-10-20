@@ -23,12 +23,28 @@ import gc
 # ================================================================
 from pathlib import Path
 
-def save_results(fold_num, model_name, results):
-    out_dir = Path("results") / model_name
+FEATURES = [
+    "average_cell_voltage",
+    "charging_current",
+    "state_of_charge",
+    "maximum_cell_voltage",
+    "minimum_cell_voltage",
+    "maximum_temperature",
+    "minimum_temperature",
+    "timestamp"
+]
+
+def save_results(fold_num, model_name, sampling, results, selected_features=[]):
+    out_dir = Path("results") / model_name / f"feature_sel_{len(selected_features)}"
+    out_dir.mkdir(parents=True, exist_ok=True)
     filename =  out_dir / f"results_fold_{fold_num}_{model_name}.txt"
     with open(filename, "w", encoding="utf-8") as f:
         f.write(f"Fold: {fold_num}\n")
         f.write(f"Model: {model_name}\n")
+        f.write(f"Sampling: {sampling}%\n")
+        f.write(f"Feature Selection:\n")
+        for i, feature in enumerate(selected_features):
+            f.write(f"  Feature {i}: {FEATURES[feature]}\n")
         f.write("=" * 40 + "\n")
         for key, value in results.items():
             f.write(f"{key}: {value:.4f}\n")
@@ -42,6 +58,7 @@ if __name__ == '__main__':
     parser.add_argument('--fold_num', type=int, default=0)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--model', type=str, default='XGBoost')
+    parser.add_argument('--sampling', type=int, default=100)
     parser.add_argument('--num_epochs', type=int, default=50)
     parser.add_argument('--load_saved_dataset', action='store_true')
 
@@ -57,7 +74,7 @@ if __name__ == '__main__':
         with open(f'saved_dataset/test_dataset_{args.fold_num}.pkl', 'rb') as f:
             test_dataset = pickle.load(f)
     else:
-        train_pre = CapacityDataset(train=True, fold_num=args.fold_num)
+        train_pre = CapacityDataset(train=True, fold_num=args.fold_num, sampling=args.sampling)
         test_pre = CapacityDataset(train=False, fold_num=args.fold_num)
 
         normalizer = Normalizer(dfs=[train_pre[i][0] for i in range(200)],
@@ -113,7 +130,7 @@ if __name__ == '__main__':
                 'Epoch [{}/{}], Test Loss: {:.4f}'.format(epoch + 1, args.num_epochs, test_loss/len(test_dataset)))
             final_test_loss = test_loss / len(test_dataset)
 
-        save_results(args.fold_num, args.model, {
+        save_results(args.fold_num, args.model, args.sampling, {
             "Final Train Loss": final_train_loss,
             "Final Test Loss": final_test_loss
         })
@@ -158,13 +175,15 @@ if __name__ == '__main__':
 
     elif args.model == "XGBoost":
         # XGBoost
-        train_data = np.empty((len(train_dataset), 1024), dtype=np.float16)
+        selected_features = [0, 1, 2, 4, 6]
+
+        train_data = np.empty((len(train_dataset), 128 * len(selected_features)), dtype=np.float16)
         train_labels = np.empty(len(train_dataset), dtype=np.float32)
 
         for i in range(len(train_dataset)):
             data, metadata = train_dataset[i]
 
-            train_data[i] = data.reshape(-1)
+            train_data[i] = data[:, selected_features].reshape(-1)
             train_labels[i] = metadata['capacity']
 
         dtrain = xgb.DMatrix(train_data, label=train_labels)
@@ -193,13 +212,13 @@ if __name__ == '__main__':
         del train_labels
         gc.collect()
 
-        test_data = np.empty((len(test_dataset), 1024), dtype=np.float16)
+        test_data = np.empty((len(test_dataset), 128 * len(selected_features)), dtype=np.float16)
         test_labels = np.empty(len(test_dataset), dtype=np.float32)
 
         for i in range(len(test_dataset)):
             data, metadata = test_dataset[i]
 
-            test_data[i] = data.reshape(-1)
+            test_data[i] = data[:, selected_features].reshape(-1)
             test_labels[i] = metadata['capacity']
 
         dtest = xgb.DMatrix(test_data, label=test_labels)
@@ -213,10 +232,10 @@ if __name__ == '__main__':
         print("Train RMSE:", train_rmse)
         print("Test RMSE:", test_rmse)
 
-        save_results(args.fold_num, args.model, {
+        save_results(args.fold_num, args.model, args.sampling, {
             "Train RMSE": train_rmse,
             "Test RMSE": test_rmse
-        })
+        }, selected_features)
 
     elif args.model == "MEAN":
         train_data_list = [train_dataset.__getitem__(i)[0] for i in range(len(train_dataset))]
@@ -263,22 +282,23 @@ if __name__ == '__main__':
     #     })
 
     elif args.model == "RandomForest":
-        train_data = np.empty((len(train_dataset), 1024), dtype=np.float16)
+        selected_features = [0, 1, 2, 4, 6]
+        train_data = np.empty((len(train_dataset), 128 * len(selected_features)), dtype=np.float16)
         train_labels = np.empty(len(train_dataset), dtype=np.float32)
 
         for i in range(len(train_dataset)):
             data, metadata = train_dataset[i]
 
-            train_data[i] = data.reshape(-1)
+            train_data[i] = data[:, selected_features].reshape(-1)
             train_labels[i] = metadata['capacity']
 
-        test_data = np.empty((len(test_dataset), 1024), dtype=np.float16)
+        test_data = np.empty((len(test_dataset), 128 * len(selected_features)), dtype=np.float16)
         test_labels = np.empty(len(test_dataset), dtype=np.float32)
 
         for i in range(len(test_dataset)):
             data, metadata = test_dataset[i]
 
-            test_data[i] = data.reshape(-1)
+            test_data[i] = data[:, selected_features].reshape(-1)
             test_labels[i] = metadata['capacity']
 
         model = RandomForestRegressor(n_estimators=10, random_state=0, n_jobs=10, max_depth=4)
@@ -293,10 +313,10 @@ if __name__ == '__main__':
         test_rmse = np.sqrt(mean_squared_error(test_labels, test_predictions))
         print("Test RMSE:", test_rmse)
 
-        save_results(args.fold_num, args.model, {
+        save_results(args.fold_num, args.model, args.sampling, {
             "Train RMSE": train_rmse,
             "Test RMSE": test_rmse
-        })
+        }, selected_features)
 
     elif args.model == "MLP":
         model = MLP(input_dim=128*8, hidden_dim=32, output_dim=1) # .cuda()
