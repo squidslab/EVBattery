@@ -35,16 +35,17 @@ FEATURES = [
 ]
 
 def save_results(fold_num, model_name, sampling, results, selected_features=[]):
-    out_dir = Path("results") / model_name / f"feature_sel_{len(selected_features)}"
+    out_dir = Path("results") / model_name / f"sampling-{sampling}" / f"feature_sel_{len(selected_features)}"
     out_dir.mkdir(parents=True, exist_ok=True)
     filename =  out_dir / f"results_fold_{fold_num}_{model_name}.txt"
     with open(filename, "w", encoding="utf-8") as f:
         f.write(f"Fold: {fold_num}\n")
         f.write(f"Model: {model_name}\n")
         f.write(f"Sampling: {sampling}%\n")
-        f.write(f"Feature Selection:\n")
-        for i, feature in enumerate(selected_features):
-            f.write(f"  Feature {i}: {FEATURES[feature]}\n")
+        if len(selected_features) < len(FEATURES):
+            f.write(f"Feature Selection:\n")
+            for i, feature in enumerate(selected_features):
+                f.write(f"  Feature {i}: {FEATURES[feature]}\n")
         f.write("=" * 40 + "\n")
         for key, value in results.items():
             f.write(f"{key}: {value:.4f}\n")
@@ -57,9 +58,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch capacity estimation')
     parser.add_argument('--fold_num', type=int, default=0)
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--model', type=str, default='XGBoost')
+    parser.add_argument('--model', type=str, default='LSTMNet')
+    parser.add_argument('--num_epochs', type=int, default=10)
     parser.add_argument('--sampling', type=int, default=100)
-    parser.add_argument('--num_epochs', type=int, default=50)
+    parser.add_argument('--feature_selection', type=bool, default=False)
     parser.add_argument('--load_saved_dataset', action='store_true')
 
 
@@ -87,9 +89,14 @@ if __name__ == '__main__':
         with open(f'saved_dataset/test_dataset_{args.fold_num}.pkl', 'wb') as f:
             pickle.dump(test_dataset, f)
 
+        if args.feature_selection:
+            selected_features = [0, 1, 2, 4, 6]
+        else:
+            selected_features = list(range(len(FEATURES)))
+
     # LSTM
     if args.model == "LSTMNet":
-        model = LSTMNet(input_dim=8, hidden_dim=32, output_dim=1) # .cuda()
+        model = LSTMNet(input_dim=len(selected_features), hidden_dim=32, output_dim=1) # .cuda()
         optimizer = optim.Adam(model.parameters(), lr=0.001)
         criterion = nn.MSELoss()
 
@@ -103,7 +110,7 @@ if __name__ == '__main__':
             model.train()
             epoch_loss = 0
             for batch_idx, batch_data in enumerate(tqdm(train_loader)):
-                data = to_var(batch_data[0].float())
+                data = to_var(batch_data[0][:, :, selected_features].float())
                 capacity = to_var(batch_data[1]['capacity'].float())
                 output = model(data)
                 loss = criterion(output.reshape(-1), capacity.reshape(-1))
@@ -121,7 +128,7 @@ if __name__ == '__main__':
             test_loss = 0
             with torch.no_grad():
                 for batch_idx, batch_data in enumerate(tqdm(test_loader)):
-                    data = to_var(batch_data[0].float())
+                    data = to_var(batch_data[0][:, :, selected_features].float())
                     capacity = to_var(batch_data[1]['capacity'].float())
                     output = model(data)
                     loss = criterion(output.reshape(-1), capacity.reshape(-1))
@@ -133,7 +140,7 @@ if __name__ == '__main__':
         save_results(args.fold_num, args.model, args.sampling, {
             "Final Train Loss": final_train_loss,
             "Final Test Loss": final_test_loss
-        })
+        }, selected_features)
 
     # elif args.model == "XGBoost":
     #     # XGBoost
@@ -175,8 +182,6 @@ if __name__ == '__main__':
 
     elif args.model == "XGBoost":
         # XGBoost
-        selected_features = [0, 1, 2, 4, 6]
-
         train_data = np.empty((len(train_dataset), 128 * len(selected_features)), dtype=np.float16)
         train_labels = np.empty(len(train_dataset), dtype=np.float32)
 
@@ -282,7 +287,6 @@ if __name__ == '__main__':
     #     })
 
     elif args.model == "RandomForest":
-        selected_features = [0, 1, 2, 4, 6]
         train_data = np.empty((len(train_dataset), 128 * len(selected_features)), dtype=np.float16)
         train_labels = np.empty(len(train_dataset), dtype=np.float32)
 

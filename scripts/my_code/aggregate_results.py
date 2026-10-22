@@ -19,23 +19,6 @@ FEATURES = [
 selected_features = [0, 1, 2, 4, 6] 
 
 def read_test_rmse(file_path: Path, model: str) -> float:
-    """Legge test RMSE o converte Test Loss in RMSE per LSTMNet."""
-    text = file_path.read_text(encoding="utf-8")
-
-    match = re.search(
-        r"Test\s+RMSE\s*:\s*([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)",
-        text,
-        flags=re.IGNORECASE,
-    )
-
-    if not match:
-        raise ValueError(f"Valore 'Test RMSE' non trovato in {file_path.name}")
-
-    return float(match.group(1))
-
-
-def read_test_rmse(file_path: Path, model: str) -> float:
-    """Legge Test RMSE oppure converte Test MSE in RMSE per LSTMNet."""
     text = file_path.read_text(encoding="utf-8")
 
     if model.lower() == "lstmnet":
@@ -63,12 +46,13 @@ def read_test_rmse(file_path: Path, model: str) -> float:
     return value
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Aggrega i Test RMSE dei file results_fold_*.txt."
-    )
+    parser = argparse.ArgumentParser(description="Aggrega i Test RMSE dei file results_fold_*.txt.")
     parser.add_argument(
         "--results-dir",
-        default="LSTMNet/feature_sel_5/",
+        # default="sampling-1/",
+        # default="sampling-25/",
+        # default="sampling-50/",
+        default="sampling-100/",
         help="Cartella contenente i file results_fold_*.txt",
     )
     parser.add_argument(
@@ -93,14 +77,9 @@ def main():
         default="100%",
         help="Percentuale di sampling da riportare nel riepilogo",
     )
-    parser.add_argument(
-        "--output",
-        default=None,
-        help="Percorso del file di output (default: results.txt nella cartella)",
-    )
     args = parser.parse_args()
 
-    source_dir = Path("../authors_code/battery_dataset_neurips23dataset_code/capacity_estimation/results") / args.results_dir
+    source_dir = Path("../authors_code/battery_dataset_neurips23dataset_code/capacity_estimation/results") / args.model / args.results_dir
     
     if not source_dir.is_dir():
         raise SystemExit(f"Cartella non trovata: {source_dir}")
@@ -147,8 +126,6 @@ def main():
     for file in source_dir.glob("results_fold_*.txt"):
         shutil.move(str(file), str(results_dir / file.name))
 
-    # Deviazione standard della popolazione: divide per N, come nel riepilogo
-    # RMSE ± deviazione standard comunemente calcolato sui fold.
     std_rmse = statistics.pstdev(rmse_values) if len(rmse_values) > 1 else 0.0
 
     lines = [
@@ -179,10 +156,10 @@ def main():
         "",
     ])
 
-    args.model = "RF" if args.model == "RandomForest" else args.model
+    args.model = "RF" if args.model == "RandomForest" else "LSTM" if args.model == "LSTMNet" else args.model
     file_name = f"results_{name}_{args.model}.txt"
     
-    output_path = Path(args.output) if args.output else results_dir / file_name
+    output_path = results_dir / file_name
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines), encoding="utf-8")
 
