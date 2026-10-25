@@ -1,0 +1,16 @@
+Permutation Feature Importance - XGBoost
+Fold esterno: 1
+XGBoost version: 1.5.2
+Training interno: 392659 snippet
+Validation valutata: 86121 snippet
+RMSE baseline: 1.426939
+
+Ranking (incremento RMSE decrescente):
+1. state_of_charge: +1.061471 (dev.std. 0.003126)
+2. average_cell_voltage: +0.809377 (dev.std. 0.003673)
+3. minimum_cell_temperature: +0.513189 (dev.std. 0.001567)
+4. minimum_cell_voltage: +0.245426 (dev.std. 0.000244)
+5. charging_current: +0.206460 (dev.std. 0.002035)
+6. maximum_cell_voltage: +0.164688 (dev.std. 0.002288)
+7. maximum_cell_temperature: +0.130302 (dev.std. 0.001930)
+8. timestamp: +0.000000 (dev.std. 0.000000)

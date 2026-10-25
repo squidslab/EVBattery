@@ -1,0 +1,14 @@
+========================================
+BATTERY DATASET 1 - MODEL LSTMNet
+========================================
+
+Sampling: 50%
+
+Fold 0 -> Test RMSE: 1.6062
+Fold 1 -> Test RMSE: 1.7318
+Fold 2 -> Test RMSE: 1.7262
+Fold 3 -> Test RMSE: 1.7103
+Fold 4 -> Test RMSE: 1.7856
+
+========================================
+RMSE = 1.71 ± 0.06

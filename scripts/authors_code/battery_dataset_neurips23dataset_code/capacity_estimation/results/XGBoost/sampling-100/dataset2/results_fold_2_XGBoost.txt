@@ -1,0 +1,5 @@
+Fold: 2
+Model: XGBoost
+========================================
+Train RMSE: 1.2884
+Test RMSE: 1.1976

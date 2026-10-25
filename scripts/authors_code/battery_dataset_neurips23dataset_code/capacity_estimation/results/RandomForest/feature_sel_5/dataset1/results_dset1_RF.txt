@@ -1,0 +1,27 @@
+========================================
+BATTERY DATASET 1 - MODEL RandomForest
+========================================
+PARAMS:
+    n_estimators = 10
+    random_state = 0
+    n_jobs = 10
+    max_depth = 4
+----------------------------------------
+Sampling: 100%
+
+Feature Selection:
+    Feature 0: average_cell_voltage
+    Feature 1: charging_current
+    Feature 2: state_of_charge
+    Feature 3: minimum_cell_voltage
+    Feature 4: minimum_temperature
+----------------------------------------
+
+Fold 0 -> Test RMSE: 1.6787
+Fold 1 -> Test RMSE: 1.7555
+Fold 2 -> Test RMSE: 1.7606
+Fold 3 -> Test RMSE: 1.8034
+Fold 4 -> Test RMSE: 1.8847
+
+========================================
+RMSE = 1.78 ± 0.07

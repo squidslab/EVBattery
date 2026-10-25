@@ -1,0 +1,12 @@
+Fold: 0
+Model: XGBoost
+Sampling: 100%
+Feature Selection:
+  Feature 0: average_cell_voltage
+  Feature 1: charging_current
+  Feature 2: state_of_charge
+  Feature 3: minimum_cell_voltage
+  Feature 4: minimum_temperature
+========================================
+Train RMSE: 1.2530
+Test RMSE: 1.3721

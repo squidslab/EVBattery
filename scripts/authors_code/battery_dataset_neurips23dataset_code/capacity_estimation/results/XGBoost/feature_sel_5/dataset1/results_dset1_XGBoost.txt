@@ -1,0 +1,26 @@
+========================================
+BATTERY DATASET 1 - MODEL XGBoost
+========================================
+PARAMS:
+    num_rounds = 50
+    eta = 0.1
+    max_depth = 4
+----------------------------------------
+Sampling: 100%
+
+Feature Selection:
+    Feature 0: average_cell_voltage
+    Feature 1: charging_current
+    Feature 2: state_of_charge
+    Feature 3: minimum_cell_voltage
+    Feature 4: minimum_temperature
+----------------------------------------
+
+Fold 0 -> Test RMSE: 1.6380
+Fold 1 -> Test RMSE: 1.7150
+Fold 2 -> Test RMSE: 1.7142
+Fold 3 -> Test RMSE: 1.7483
+Fold 4 -> Test RMSE: 1.8223
+
+========================================
+RMSE = 1.73 ± 0.06

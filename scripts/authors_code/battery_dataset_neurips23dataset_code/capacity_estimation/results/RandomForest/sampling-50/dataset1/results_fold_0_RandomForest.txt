@@ -1,0 +1,6 @@
+Fold: 0
+Model: RandomForest
+Sampling: 50%
+========================================
+Train RMSE: 1.7734
+Test RMSE: 1.6815

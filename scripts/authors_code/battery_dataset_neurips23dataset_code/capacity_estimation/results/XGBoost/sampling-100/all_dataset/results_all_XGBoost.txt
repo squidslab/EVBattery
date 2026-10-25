@@ -1,0 +1,20 @@
+========================================
+ALL BATTERY DATASETS - MODEL XGBoost
+========================================
+PARAMS:
+    num_rounds = 50
+    eta = 0.1
+    max_depth = 4
+    tree_method = hist
+    max_bin = 64
+    nthread = 2 
+----------------------------------------
+
+Fold: 0 -> Test Loss: 1.6835
+Fold: 1 -> Test Loss: 1.7701
+Fold: 2 -> Test Loss: 1.8287
+Fold: 3 -> Test Loss: 1.7420
+Fold: 4 -> Test Loss: 1.8489
+
+========================================
+RMSE = 1.77 ± 0.06

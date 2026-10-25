@@ -1,0 +1,5 @@
+Fold: 3
+Model: LSTMNet
+========================================
+Final Train Loss: 2.8555
+Final Test Loss: 2.9012

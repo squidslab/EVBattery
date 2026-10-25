@@ -1,0 +1,19 @@
+========================================
+BATTERY DATASET 1 - MODEL XGBoost
+========================================
+PARAMS:
+    num_rounds = 50
+    eta = 0.1
+    max_depth = 4
+
+    Sampling = 1%
+----------------------------------------
+
+Fold 0 -> Test RMSE: 1.6733
+Fold 1 -> Test RMSE: 1.7385
+Fold 2 -> Test RMSE: 1.7317
+Fold 3 -> Test RMSE: 1.8047
+Fold 4 -> Test RMSE: 1.8710
+
+========================================
+RMSE = 1.76 ± 0.07

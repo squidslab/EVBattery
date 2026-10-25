@@ -1,0 +1,5 @@
+Fold: 3
+Model: RandomForest
+========================================
+Train RMSE: 1.2753
+Test RMSE: 1.6123

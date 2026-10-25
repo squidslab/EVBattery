@@ -1,0 +1,18 @@
+========================================
+BATTERY DATASET 1 - MODEL Random Forest
+========================================
+PARAMS:
+    n_estimators = 10
+    random_state = 0
+    n_jobs = 10
+    max_depth = 4
+----------------------------------------
+
+Fold: 0 -> Test Loss: 1.6775
+Fold: 1 -> Test Loss: 1.7560
+Fold: 2 -> Test Loss: 1.7598
+Fold: 3 -> Test Loss: 1.8003
+Fold: 4 -> Test Loss: 1.9036
+
+========================================
+RMSE = 1.78 ± 0.07

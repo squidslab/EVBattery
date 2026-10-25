@@ -56,11 +56,5 @@ htmlcov/
 /scripts/authors_code/**/capacity_estimation/**/*.pt
 /scripts/authors_code/**/capacity_estimation/**/*.pth
 
-# Logs / results generated during experiments
-*.log
-/scripts/authors_code/**/capacity_estimation/results/
-/scripts/authors_code/**/capacity_estimation/output/
-/scripts/authors_code/**/capacity_estimation/outputs/
-
 # Other
 *.pdf

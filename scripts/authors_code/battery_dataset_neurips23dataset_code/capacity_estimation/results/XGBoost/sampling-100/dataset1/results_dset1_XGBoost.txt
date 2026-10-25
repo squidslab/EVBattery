@@ -1,0 +1,17 @@
+========================================
+BATTERY DATASET 1 - MODEL XGBoost
+========================================
+PARAMS:
+    num_rounds = 50
+    eta = 0.1
+    max_depth = 4
+----------------------------------------
+
+Fold: 0 -> Test Loss: 1.6365
+Fold: 1 -> Test Loss: 1.7147
+Fold: 2 -> Test Loss: 1.7104
+Fold: 3 -> Test Loss: 1.7429
+Fold: 4 -> Test Loss: 1.8179
+
+========================================
+RMSE = 1.72 ± 0.06

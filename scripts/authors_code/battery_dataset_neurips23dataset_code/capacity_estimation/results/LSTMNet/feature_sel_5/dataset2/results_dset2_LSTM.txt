@@ -1,0 +1,22 @@
+========================================
+BATTERY DATASET 2 - MODEL LSTMNet
+========================================
+
+Sampling: 100%
+
+Feature Selection:
+    Feature 0: average_cell_voltage
+    Feature 1: charging_current
+    Feature 2: state_of_charge
+    Feature 3: minimum_cell_voltage
+    Feature 4: minimum_temperature
+----------------------------------------
+
+Fold 0 -> Test RMSE: 1.5258
+Fold 1 -> Test RMSE: 1.2475
+Fold 2 -> Test RMSE: 1.2209
+Fold 3 -> Test RMSE: 1.5036
+Fold 4 -> Test RMSE: 1.5722
+
+========================================
+RMSE = 1.41 ± 0.15
