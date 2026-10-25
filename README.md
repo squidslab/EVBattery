@@ -25,13 +25,14 @@ For the sake of readers, a brief summary of the paper is also provided in this R
 - [Running the capacity-estimation code](#running-the-capacity-estimation-code)
 - [Main models](#main-models)
 - [Expected computational cost](#expected-computational-cost)
+- [Reducing computational cost](#reducing-computational-cost)
 - [References and license](#references-and-license)
 
 ---
 
 # Project goal
 
-The main objective of this project is to study the EVBattery dataset and establish a reproducible baseline which requires less datas for **battery capacity estimation**.
+The main objective of this project is to study the EVBattery dataset and evaluate different approaches to **battery capacity estimation**, with a particular focus on reducing computational requirements while preserving predictive performance, using strategies such as **sampling** and **feature selection**, discussed in [Reducing computational cost](#reducing-computational-cost).
 
 The authors formulate capacity estimation as a regression problem. Only charging snippets for which a capacity value is available are used in the capacity-estimation experiments.
 
@@ -44,7 +45,7 @@ The authors benchmark:
 
 The current implementation contains all of these branches in `capacity_estimation/main.py`. We will focus on Random Forest, XGBoost and LSTM later in this README.
 
-For the thesis work, the authors' implementation is treated as a **black box**: the first objective is to reproduce and understand the original pipeline without making independent modifications.
+For the thesis work, the authors' implementation is treated as a **black box**: the first objective is to reproduce the original pipeline against which these modifications are evaluated. After that, the aim is to distinguish the effects of each modification and assess the trade-off between predictive performance and computational cost.
 
 
 
@@ -513,6 +514,8 @@ capacity != 0
 battery_dataset.append()
 ```
 
+An optional sampling strategy can be applied at this stage to randomly select a percentage of valid training snippets.
+
 
 # Running the capacity-estimation code
 
@@ -602,6 +605,13 @@ For XGBoost, it is equivalent to the number of boosting rounds.
 
 ```bash
 python main.py --num_epochs 50
+```
+
+### `--sampling`
+
+Determines the sampling ratio applied when data are loaded.
+```bash
+python main.py --sampling 75
 ```
 
 ### `--load_saved_dataset`
@@ -738,6 +748,52 @@ This reduces the need to keep all snippet objects in memory simultaneously, alth
 Even with this change in the authors' code, some algorithms implemented in `main.py`, such as **XGBoost**, still require all training and test snippets to be loaded into memory simultaneously.
 
 Consequently, the memory estimates above should not be interpreted solely as the theoretical size of all numerical arrays if they were held in memory simultaneously, since this scenario actually occurs in some implementations!
+
+
+# Reducing computational cost
+
+In addition to the strategies discussed in the previous section, which focus on data dimensionality and loading methods, other approaches can be used to reduce computational cost. In this project, the following strategies have been adopted:
+
+## 1. Training-set sampling
+
+The original pipeline uses all available charging snippets with a valid capacity label from the training vehicles selected for the current cross-validation fold.
+
+To investigate the relationship between training-set size and predictive performance, a configurable sampling strategy has been introduced.
+
+The sampling ratio is controlled through the `--sampling` argument in `main.py`. A ratio of `100` corresponds to using the entire eligible training set, while smaller integer values select a subset of the available training snippets.
+
+For example:
+
+```bash
+python main.py --model RandomForest --sampling_ratio 50
+```
+
+This configuration uses 50% of the eligible training snippets.
+
+**Sampling is applied exclusively to the training set.** The original vehicle-level five-fold split is performed first, and the test set remains complete and unchanged across sampling configurations. This ensures that the models are evaluated against the same test data when comparing different training-set sizes.
+
+The purpose of this experiment is to determine how much the training data can be reduced without substantially compromising capacity-estimation accuracy.
+
+## 2. Feature selection
+
+The original pipeline uses all eight time-series features for capacity estimation.
+
+To investigate whether all input variables are necessary, the implementation has been extended to support **feature selection** for the relevant models.
+
+The selected features determine which time-series variables are retained from each charging snippet before the model receives the input data.
+
+Reducing the number of selected features also reduces the input dimensionality. For example:
+
+| Input configuration | Features | Values per snippet |
+|---|---:|---:|
+| Original input | 8 | 1,024 |
+| Reduced input | 5 | 640 |
+
+The selected feature indices must be applied consistently to both training and test data. All other experimental conditions, including the original vehicle-level cross-validation split, should remain unchanged when comparing feature configurations.
+
+The objective is to identify a smaller set of input variables that preserves, or potentially improves, predictive performance while reducing the dimensionality of the estimation problem.
+
+> **Important:** The _hard-coded_ features has been selected based on the results of the script `analizing_feature_selection.py`, which investigate the relevance of the original time-series features using XGBoost and the **permutation feature importance** technique. The purpose of this analysis is to identify which input variables contribute most to battery capacity estimation and use the results to guide subsequent feature-selection experiments.
 
 
 # References and license
