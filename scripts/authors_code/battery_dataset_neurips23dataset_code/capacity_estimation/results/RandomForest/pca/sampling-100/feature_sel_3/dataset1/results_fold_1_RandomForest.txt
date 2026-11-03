@@ -1,0 +1,10 @@
+Fold: 1
+Model: RandomForest
+Sampling: 100%
+Feature Selection:
+  Feature 0: average_cell_voltage
+  Feature 1: charging_current
+  Feature 2: state_of_charge
+========================================
+Train RMSE: 1.7633
+Test RMSE: 1.7599

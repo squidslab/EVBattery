@@ -52,7 +52,7 @@ def main():
         # default="sampling-1/",
         # default="sampling-25/",
         # default="sampling-50/",
-        default="sampling-100/",
+        default="pca/sampling-100/feature_sel_3/",
         help="Cartella contenente i file results_fold_*.txt",
     )
     parser.add_argument(
@@ -134,12 +134,13 @@ def main():
         "=" * 40,
         "",
         f"Sampling: {args.sampling}",
-        "",
-        "Feature Selection:",
+        # "",
+        # "Feature Selection:",
+        "PCA: Yes"
     ]
 
-    for i, selected_feature in enumerate(selected_features):
-        lines.append(f"    Feature {i}: {FEATURES[selected_feature]}")
+    # for i, selected_feature in enumerate(selected_features):
+    #     lines.append(f"    Feature {i}: {FEATURES[selected_feature]}")
 
     lines.append("-" * 40)
     lines.append("")

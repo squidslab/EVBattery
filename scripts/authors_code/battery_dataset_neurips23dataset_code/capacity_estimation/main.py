@@ -16,10 +16,11 @@ import xgboost as xgb
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
 from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.decomposition import IncrementalPCA
 from utils import build_loc_net, get_fc_graph_struc
 import gc
 
-# NOTE: The following function is added to save the results of the model evaluation to a text file.
+# NOTE: The following instructions are added as thesis' work.
 # ================================================================
 from pathlib import Path
 
@@ -34,8 +35,8 @@ FEATURES = [
     "timestamp"
 ]
 
-def save_results(fold_num, model_name, sampling, results, selected_features=[]):
-    out_dir = Path("results") / model_name / f"sampling-{sampling}" / f"feature_sel_{len(selected_features)}"
+def save_results(fold_num, model_name, sampling, results, selected_features=[], pca=False):
+    out_dir = Path("results") / model_name / ("pca" if pca else "no_pca") / f"sampling-{sampling}" / f"feature_sel_{len(selected_features)}"
     out_dir.mkdir(parents=True, exist_ok=True)
     filename =  out_dir / f"results_fold_{fold_num}_{model_name}.txt"
     with open(filename, "w", encoding="utf-8") as f:
@@ -51,6 +52,91 @@ def save_results(fold_num, model_name, sampling, results, selected_features=[]):
             f.write(f"{key}: {value:.4f}\n")
     print(f"Results saved to {filename}")
 
+class PCATransformDataset(torch.utils.data.Dataset):
+    """
+    Apply a pre-fitted PCA to each timestep of a snippet.
+
+    Input per snippet:  (128, 8)
+    Output per snippet: (128, n_components)
+    """
+
+    def __init__(self, dataset, pca):
+        self.dataset = dataset
+        self.pca = pca
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        data, metadata = self.dataset[index]
+
+        # PCA wants 2D array of shape (n_samples, n_features)
+        # rows = timestep, columns = feature
+        data = np.asarray(data, dtype=np.float32)
+
+        transformed_data = self.pca.transform(data)
+
+        return transformed_data.astype(np.float32), metadata
+
+def fit_incremental_pca(
+    dataset,
+    n_components,
+    snippets_per_batch=256
+):
+    """
+    IncrementalPCA is used to estimate PCA using all snippets in the dataset.
+
+    Each snippet has shape (128, 8).
+    PCA is estimated on the rows, i.e., on the timesteps.
+
+    snippets_per_batch limits the amount of data loaded
+    at once during the fit.
+    """
+
+    pca = IncrementalPCA(
+        n_components=n_components,
+        batch_size=128 * snippets_per_batch
+    )
+
+    n_snippets = len(dataset)
+
+    for start in range(0, n_snippets, snippets_per_batch):
+        end = min(start + snippets_per_batch, n_snippets)
+
+        batch_snippets = []
+
+        for index in range(start, end):
+            data, _ = dataset[index]
+
+            data = np.asarray(data, dtype=np.float32)
+            batch_snippets.append(data)
+
+        # (numero_snippet_batch * 128, 8)
+        batch_data = np.concatenate(batch_snippets, axis=0)
+
+        pca.partial_fit(batch_data)
+
+        del batch_snippets
+        del batch_data
+        gc.collect()
+
+        print(
+            f"PCA fit: {end}/{n_snippets} snippets processed",
+            end="\r"
+        )
+
+    print()
+
+    explained_variance = np.sum(pca.explained_variance_ratio_)
+
+    print(f"Number of PCA components: {n_components}")
+    print(
+        "Cumulative explained variance: "
+        f"{explained_variance:.4%}"
+    )
+
+    return pca
+
 # ================================================================
 
 
@@ -62,6 +148,9 @@ if __name__ == '__main__':
     parser.add_argument('--num_epochs', type=int, default=10)
     parser.add_argument('--sampling', type=int, default=100)
     parser.add_argument('--feature_selection', type=bool, default=False)
+    parser.add_argument('--pca', type=bool, default=True)
+    parser.add_argument('--pca_components', type=int, default=3)
+    parser.add_argument('--pca_batch_snippets', type=int, default=256)
     parser.add_argument('--load_saved_dataset', action='store_true')
 
 
@@ -70,29 +159,149 @@ if __name__ == '__main__':
     print("args", args)
 
     # load dataset
+    # if args.load_saved_dataset:
+    #     with open(f'saved_dataset/train_dataset_fold_{args.fold_num}.pkl', 'rb') as f:
+    #         train_dataset = pickle.load(f)
+    #     with open(f'saved_dataset/test_dataset_{args.fold_num}.pkl', 'rb') as f:
+    #         test_dataset = pickle.load(f)
+    # else:
+    #     train_pre = CapacityDataset(train=True, fold_num=args.fold_num, sampling=args.sampling)
+    #     test_pre = CapacityDataset(train=False, fold_num=args.fold_num)
+
+    #     normalizer = Normalizer(dfs=[train_pre[i][0] for i in range(200)],
+    #                                  variable_length=False)
+    #     train_dataset = PreprocessNormalizer(train_pre, normalizer_fn=normalizer.norm_func)
+    #     test_dataset = PreprocessNormalizer(test_pre, normalizer_fn=normalizer.norm_func)
+    #     os.makedirs("saved_dataset", exist_ok=True)
+    #     with open(f'saved_dataset/train_dataset_fold_{args.fold_num}.pkl', 'wb') as f:
+    #         pickle.dump(train_dataset, f)
+    #     with open(f'saved_dataset/test_dataset_{args.fold_num}.pkl', 'wb') as f:
+    #         pickle.dump(test_dataset, f)
+
+    #     if args.feature_selection:
+    #         selected_features = [0, 1, 2, 4, 6]
+    #     else:
+    #         selected_features = list(range(len(FEATURES)))
+
+    # ================================================================
+    # Load dataset + optional PCA
+    # ================================================================
+
+    selected_features = list(range(len(FEATURES)))
+
+    if args.feature_selection:
+        selected_features = [0, 1, 2, 4, 6]
+
+    if args.pca and args.feature_selection:
+        raise ValueError(
+            "Per questo esperimento PCA e feature selection "
+            "devono essere usate separatamente."
+        )
+
     if args.load_saved_dataset:
-        with open(f'saved_dataset/train_dataset_fold_{args.fold_num}.pkl', 'rb') as f:
+        with open(
+            f"saved_dataset/train_dataset_fold_{args.fold_num}.pkl",
+            "rb"
+        ) as f:
             train_dataset = pickle.load(f)
-        with open(f'saved_dataset/test_dataset_{args.fold_num}.pkl', 'rb') as f:
+
+        with open(
+            f"saved_dataset/test_dataset_{args.fold_num}.pkl",
+            "rb"
+        ) as f:
             test_dataset = pickle.load(f)
+
     else:
-        train_pre = CapacityDataset(train=True, fold_num=args.fold_num, sampling=args.sampling)
-        test_pre = CapacityDataset(train=False, fold_num=args.fold_num)
+        # Full training fold dataset, used to fit PCA before sampling.
+        train_full_pre = CapacityDataset(
+            train=True,
+            fold_num=args.fold_num,
+            sampling=100
+        )
 
-        normalizer = Normalizer(dfs=[train_pre[i][0] for i in range(200)],
-                                     variable_length=False)
-        train_dataset = PreprocessNormalizer(train_pre, normalizer_fn=normalizer.norm_func)
-        test_dataset = PreprocessNormalizer(test_pre, normalizer_fn=normalizer.norm_func)
-        os.makedirs("saved_dataset", exist_ok=True)
-        with open(f'saved_dataset/train_dataset_fold_{args.fold_num}.pkl', 'wb') as f:
-            pickle.dump(train_dataset, f)
-        with open(f'saved_dataset/test_dataset_{args.fold_num}.pkl', 'wb') as f:
-            pickle.dump(test_dataset, f)
+        # Training dataset, possibly sampled.
+        train_pre = CapacityDataset(
+            train=True,
+            fold_num=args.fold_num,
+            sampling=args.sampling
+        )
 
-        if args.feature_selection:
-            selected_features = [0, 1, 2, 4, 6]
-        else:
-            selected_features = list(range(len(FEATURES)))
+        # Test dataset, always the full test fold.
+        test_pre = CapacityDataset(
+            train=False,
+            fold_num=args.fold_num
+        )
+
+        # Normalizer fitted on the full training fold dataset.
+        normalizer = Normalizer(
+            dfs=[
+                train_full_pre[i][0]
+                for i in range(min(200, len(train_full_pre)))
+            ],
+            variable_length=False
+        )
+
+        train_full_normalized = PreprocessNormalizer(
+            train_full_pre,
+            normalizer_fn=normalizer.norm_func
+        )
+
+        train_dataset = PreprocessNormalizer(
+            train_pre,
+            normalizer_fn=normalizer.norm_func
+        )
+
+        test_dataset = PreprocessNormalizer(
+            test_pre,
+            normalizer_fn=normalizer.norm_func
+        )
+
+        if args.pca:
+            pca = fit_incremental_pca(
+                dataset=train_full_normalized,
+                n_components=args.pca_components,
+                snippets_per_batch=args.pca_batch_snippets
+            )
+
+            # Apply PCA to the training and test datasets.
+            train_dataset = PCATransformDataset(
+                train_dataset,
+                pca
+            )
+
+            test_dataset = PCATransformDataset(
+                test_dataset,
+                pca
+            )
+
+            # Select the first n PCA components as features.
+            selected_features = list(
+                range(args.pca_components)
+            )
+
+            print(
+                "PCA applicata. "
+                f"Input shape: (128, {args.pca_components})"
+            )
+
+        del train_full_pre
+        del train_full_normalized
+        gc.collect()
+
+        if not args.pca:
+            os.makedirs("saved_dataset", exist_ok=True)
+
+            with open(
+                f"saved_dataset/train_dataset_fold_{args.fold_num}.pkl",
+                "wb"
+            ) as f:
+                pickle.dump(train_dataset, f)
+
+            with open(
+                f"saved_dataset/test_dataset_{args.fold_num}.pkl",
+                "wb"
+            ) as f:
+                pickle.dump(test_dataset, f)
 
     # LSTM
     if args.model == "LSTMNet":
@@ -140,7 +349,7 @@ if __name__ == '__main__':
         save_results(args.fold_num, args.model, args.sampling, {
             "Final Train Loss": final_train_loss,
             "Final Test Loss": final_test_loss
-        }, selected_features)
+        }, selected_features, args.pca)
 
     # elif args.model == "XGBoost":
     #     # XGBoost
@@ -240,7 +449,7 @@ if __name__ == '__main__':
         save_results(args.fold_num, args.model, args.sampling, {
             "Train RMSE": train_rmse,
             "Test RMSE": test_rmse
-        }, selected_features)
+        }, selected_features, args.pca)
 
     elif args.model == "MEAN":
         train_data_list = [train_dataset.__getitem__(i)[0] for i in range(len(train_dataset))]
@@ -320,7 +529,7 @@ if __name__ == '__main__':
         save_results(args.fold_num, args.model, args.sampling, {
             "Train RMSE": train_rmse,
             "Test RMSE": test_rmse
-        }, selected_features)
+        }, selected_features, args.pca)
 
     elif args.model == "MLP":
         model = MLP(input_dim=128*8, hidden_dim=32, output_dim=1) # .cuda()

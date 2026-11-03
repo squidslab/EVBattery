@@ -1,0 +1,10 @@
+Fold: 2
+Model: LSTMNet
+Sampling: 100%
+Feature Selection:
+  Feature 0: average_cell_voltage
+  Feature 1: charging_current
+  Feature 2: state_of_charge
+========================================
+Final Train Loss: 1.7402
+Final Test Loss: 1.5669
