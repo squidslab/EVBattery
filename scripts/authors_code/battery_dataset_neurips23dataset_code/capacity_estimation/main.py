@@ -43,7 +43,7 @@ def save_results(fold_num, model_name, sampling, results, selected_features=[], 
         f.write(f"Fold: {fold_num}\n")
         f.write(f"Model: {model_name}\n")
         f.write(f"Sampling: {sampling}%\n")
-        if len(selected_features) < len(FEATURES):
+        if not pca and len(selected_features) < len(FEATURES):
             f.write(f"Feature Selection:\n")
             for i, feature in enumerate(selected_features):
                 f.write(f"  Feature {i}: {FEATURES[feature]}\n")
@@ -69,35 +69,22 @@ class PCATransformDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         data, metadata = self.dataset[index]
-
-        # PCA wants 2D array of shape (n_samples, n_features)
-        # rows = timestep, columns = feature
         data = np.asarray(data, dtype=np.float32)
-
         transformed_data = self.pca.transform(data)
 
         return transformed_data.astype(np.float32), metadata
 
-def fit_incremental_pca(
-    dataset,
-    n_components,
-    snippets_per_batch=256
-):
+def fit_incremental_pca(dataset, n_components, snippets_per_batch=256):
     """
     IncrementalPCA is used to estimate PCA using all snippets in the dataset.
 
     Each snippet has shape (128, 8).
     PCA is estimated on the rows, i.e., on the timesteps.
 
-    snippets_per_batch limits the amount of data loaded
-    at once during the fit.
+    snippets_per_batch limits the amount of data loaded at once during the fit.
     """
 
-    pca = IncrementalPCA(
-        n_components=n_components,
-        batch_size=128 * snippets_per_batch
-    )
-
+    pca = IncrementalPCA(n_components=n_components, batch_size=128 * snippets_per_batch)
     n_snippets = len(dataset)
 
     for start in range(0, n_snippets, snippets_per_batch):
@@ -116,24 +103,12 @@ def fit_incremental_pca(
 
         pca.partial_fit(batch_data)
 
-        del batch_snippets
-        del batch_data
-        gc.collect()
-
-        print(
-            f"PCA fit: {end}/{n_snippets} snippets processed",
-            end="\r"
-        )
-
-    print()
+        print(f"PCA fit: {end}/{n_snippets} snippets processed", end="\r")
 
     explained_variance = np.sum(pca.explained_variance_ratio_)
 
-    print(f"Number of PCA components: {n_components}")
-    print(
-        "Cumulative explained variance: "
-        f"{explained_variance:.4%}"
-    )
+    print(f"\nNumber of PCA components: {n_components}")
+    print(f"Cumulative explained variance: {explained_variance:.4%}")
 
     return pca
 
@@ -148,7 +123,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_epochs', type=int, default=10)
     parser.add_argument('--sampling', type=int, default=100)
     parser.add_argument('--feature_selection', type=bool, default=False)
-    parser.add_argument('--pca', type=bool, default=True)
+    parser.add_argument('--pca', type=bool, default=False)
     parser.add_argument('--pca_components', type=int, default=3)
     parser.add_argument('--pca_batch_snippets', type=int, default=256)
     parser.add_argument('--load_saved_dataset', action='store_true')
@@ -165,7 +140,7 @@ if __name__ == '__main__':
     #     with open(f'saved_dataset/test_dataset_{args.fold_num}.pkl', 'rb') as f:
     #         test_dataset = pickle.load(f)
     # else:
-    #     train_pre = CapacityDataset(train=True, fold_num=args.fold_num, sampling=args.sampling)
+    #     train_pre = CapacityDataset(train=True, fold_num=args.fold_num)
     #     test_pre = CapacityDataset(train=False, fold_num=args.fold_num)
 
     #     normalizer = Normalizer(dfs=[train_pre[i][0] for i in range(200)],
@@ -178,11 +153,6 @@ if __name__ == '__main__':
     #     with open(f'saved_dataset/test_dataset_{args.fold_num}.pkl', 'wb') as f:
     #         pickle.dump(test_dataset, f)
 
-    #     if args.feature_selection:
-    #         selected_features = [0, 1, 2, 4, 6]
-    #     else:
-    #         selected_features = list(range(len(FEATURES)))
-
     # ================================================================
     # Load dataset + optional PCA
     # ================================================================
@@ -193,68 +163,25 @@ if __name__ == '__main__':
         selected_features = [0, 1, 2, 4, 6]
 
     if args.pca and args.feature_selection:
-        raise ValueError(
-            "Per questo esperimento PCA e feature selection "
-            "devono essere usate separatamente."
-        )
+        raise ValueError("PCA and feature selection cannot be used together.")
 
     if args.load_saved_dataset:
-        with open(
-            f"saved_dataset/train_dataset_fold_{args.fold_num}.pkl",
-            "rb"
-        ) as f:
+        with open(f"saved_dataset/train_dataset_fold_{args.fold_num}.pkl", "rb") as f:
             train_dataset = pickle.load(f)
-
-        with open(
-            f"saved_dataset/test_dataset_{args.fold_num}.pkl",
-            "rb"
-        ) as f:
+        with open(f"saved_dataset/test_dataset_{args.fold_num}.pkl", "rb") as f:
             test_dataset = pickle.load(f)
-
     else:
-        # Full training fold dataset, used to fit PCA before sampling.
-        train_full_pre = CapacityDataset(
-            train=True,
-            fold_num=args.fold_num,
-            sampling=100
-        )
+        # used to fit normalizer and PCA on the full training fold dataset, sampling=100 is implied
+        train_full_pre = CapacityDataset(train=True, fold_num=args.fold_num)
 
-        # Training dataset, possibly sampled.
-        train_pre = CapacityDataset(
-            train=True,
-            fold_num=args.fold_num,
-            sampling=args.sampling
-        )
+        train_pre = CapacityDataset(train=True, fold_num=args.fold_num, sampling=args.sampling)
+        test_pre = CapacityDataset(train=False, fold_num=args.fold_num)
 
-        # Test dataset, always the full test fold.
-        test_pre = CapacityDataset(
-            train=False,
-            fold_num=args.fold_num
-        )
-
-        # Normalizer fitted on the full training fold dataset.
-        normalizer = Normalizer(
-            dfs=[
-                train_full_pre[i][0]
-                for i in range(min(200, len(train_full_pre)))
-            ],
-            variable_length=False
-        )
-
-        train_full_normalized = PreprocessNormalizer(
-            train_full_pre,
-            normalizer_fn=normalizer.norm_func
-        )
-
-        train_dataset = PreprocessNormalizer(
-            train_pre,
-            normalizer_fn=normalizer.norm_func
-        )
-
-        test_dataset = PreprocessNormalizer(
-            test_pre,
-            normalizer_fn=normalizer.norm_func
-        )
+        normalizer = Normalizer(dfs=[train_pre[i][0] for i in range(200)],
+                                     variable_length=False)
+        train_full_normalized = PreprocessNormalizer(train_full_pre, normalizer_fn=normalizer.norm_func)
+        train_dataset = PreprocessNormalizer(train_pre, normalizer_fn=normalizer.norm_func)
+        test_dataset = PreprocessNormalizer(test_pre, normalizer_fn=normalizer.norm_func)
 
         if args.pca:
             pca = fit_incremental_pca(
@@ -263,44 +190,18 @@ if __name__ == '__main__':
                 snippets_per_batch=args.pca_batch_snippets
             )
 
-            # Apply PCA to the training and test datasets.
-            train_dataset = PCATransformDataset(
-                train_dataset,
-                pca
-            )
+            train_dataset = PCATransformDataset(train_dataset, pca)
+            test_dataset = PCATransformDataset(test_dataset, pca)
 
-            test_dataset = PCATransformDataset(
-                test_dataset,
-                pca
-            )
+            selected_features = list(range(args.pca_components))
 
-            # Select the first n PCA components as features.
-            selected_features = list(
-                range(args.pca_components)
-            )
-
-            print(
-                "PCA applicata. "
-                f"Input shape: (128, {args.pca_components})"
-            )
-
-        del train_full_pre
-        del train_full_normalized
-        gc.collect()
+            print(f"PCA applicata. Input shape: (128, {args.pca_components})")
 
         if not args.pca:
             os.makedirs("saved_dataset", exist_ok=True)
-
-            with open(
-                f"saved_dataset/train_dataset_fold_{args.fold_num}.pkl",
-                "wb"
-            ) as f:
+            with open(f"saved_dataset/train_dataset_fold_{args.fold_num}.pkl", "wb") as f:
                 pickle.dump(train_dataset, f)
-
-            with open(
-                f"saved_dataset/test_dataset_{args.fold_num}.pkl",
-                "wb"
-            ) as f:
+            with open(f"saved_dataset/test_dataset_{args.fold_num}.pkl", "wb") as f:
                 pickle.dump(test_dataset, f)
 
     # LSTM
