@@ -26,6 +26,9 @@ For the sake of readers, a brief summary of the paper is also provided in this R
 - [Main models](#main-models)
 - [Expected computational cost](#expected-computational-cost)
 - [Reducing computational cost](#reducing-computational-cost)
+  - [1. Sampling](#1-sampling)
+  - [2. Feature Selection](#2-feature-selection)
+  - [3. Principal Component Analysis (PCA)](#3-principal-component-analysis-pca)
 - [References and license](#references-and-license)
 
 ---
@@ -754,25 +757,50 @@ Consequently, the memory estimates above should not be interpreted solely as the
 
 In addition to the strategies discussed in the previous section, which focus on data dimensionality and loading methods, other approaches can be used to reduce computational cost. In this project, the following strategies have been adopted:
 
-## 1. Training-set sampling
+## 1. Sampling
 
-The original pipeline uses all available charging snippets with a valid capacity label from the training vehicles selected for the current cross-validation fold.
+The original pipeline uses all available charging snippets with a valid capacity label from the vehicles selected for the current cross-validation fold.
 
-To investigate the relationship between training-set size and predictive performance, a configurable sampling strategy has been introduced.
+To investigate the relationship between data availability, input dimensionality and predictive performance, two configurable sampling strategies have been introduced.
 
-The sampling ratio is controlled through the `--sampling` argument in `main.py`. A ratio of `100` corresponds to using the entire eligible training set, while smaller integer values select a subset of the available training snippets.
+Sampling is performed at two different levels, which can be selected by (un)commenting the respective lines in `capacity_dataset.py`:
+
+### 1.1. Snippet-level sampling
+
+The first strategy reduces the number of charging snippets used during training and/or testing.
+
+A configurable sampling ratio determines the percentage of eligible snippets to retain. A ratio of `100` corresponds to using the entire dataset, while smaller integer values select a subset of the available snippets.
+
+Sampling can be applied independently to the training and test sets, allowing different experimental configurations to be investigated.
 
 For example:
 
 ```bash
-python main.py --model RandomForest --sampling_ratio 50
+python main.py --model RandomForest --sampling 50
 ```
 
-This configuration uses 50% of the eligible training snippets.
+This configuration retains 50% of the eligible charging snippets.
 
-**Sampling is applied exclusively to the training set.** The original vehicle-level five-fold split is performed first, and the test set remains complete and unchanged across sampling configurations. This ensures that the models are evaluated against the same test data when comparing different training-set sizes.
+The original vehicle-level five-fold split is always performed first. Sampling is subsequently applied to the selected snippets, without modifying the original assignment of vehicles to training and test folds.
 
-The purpose of this experiment is to determine how much the training data can be reduced without substantially compromising capacity-estimation accuracy.
+### 1.2. Record-level sampling
+
+The second strategy reduces the number of temporal observations within each charging snippet.
+
+Originally, each snippet contains 128 observations and 8 features, resulting in an input shape of `(128, 8)`.
+
+Record-level sampling selects a percentage of these temporal observations while retaining all eight original features.
+
+For example, a sampling ratio of 50% reduces each snippet from:
+
+```text
+Original shape: (128, 8)
+Reduced shape:   (64, 8)
+```
+
+This operation reduces the temporal resolution of each charging snippet without changing the number of features or the associated metadata.
+
+> **Important**: Please note that in this case, the sampling MUST be performed on both training and test sets, otherwise it could lead to errors for some algs, such as XGBoost.
 
 ## 2. Feature selection
 
@@ -795,6 +823,46 @@ The objective is to identify a smaller set of input variables that preserves, or
 
 > **Important:** The _hard-coded_ features has been selected based on the results of the script `analizing_feature_selection.py`, which investigate the relevance of the original time-series features using XGBoost and the **permutation feature importance** technique. The purpose of this analysis is to identify which input variables contribute most to battery capacity estimation and use the results to guide subsequent feature-selection experiments.
 
+## 3. Principal Component Analysis (PCA)
+
+The original pipeline uses eight time-series features for each charging snippet. Although these features provide relevant information for battery capacity estimation, some of them may contain correlated or redundant information.
+
+To investigate whether the input dimensionality can be further reduced while preserving most of the information, the implementation has been extended to support **Principal Component Analysis (PCA)**.
+
+PCA is a dimensionality reduction technique that transforms the original features into a new set of uncorrelated variables, called principal components, ordered according to the amount of variance they explain.
+
+In this project, PCA is applied independently to the feature dimension of each temporal observation. Therefore, each observation originally represented by eight features is transformed into a smaller representation containing a configurable number of principal components.
+
+The implementation uses **IncrementalPCA**, which allows the transformation to be fitted incrementally on batches of data, reducing memory requirements compared to standard PCA.
+
+The number of principal components can be configured through the `--pca_components` argument.
+For example:
+
+```bash
+python main.py --model XGBoost --pca --pca_components 3
+```
+
+With three principal components, each charging snippet is transformed from:
+
+| Input configuration | Features | Values per snippet |
+|---|---:|---:|
+| Original input | 8 | 1,024 |
+| Reduced input | 3 | 384 |
+
+The choice of three components is supported by the explained variance analysis. Across all cross-validation folds, the three components retain more than **96% of the cumulative explained variance** of the original features. For example, in fold 0, the individual explained variance ratios are approximately:
+
+| Principal component | Explained variance |
+|---|---:|
+| PC1 | 44.40% |
+| PC2 | 41.92% |
+| PC3 | 10.50% |
+| **Cumulative** | **96.81%** |
+
+Consequently, PCA allows the input dimensionality to be substantially reduced while preserving most of the information contained in the original eight features.
+
+> **Important:** PCA and feature selection are mutually exclusive in the current implementation. PCA generates new features by combining the original variables, whereas feature selection retains a subset of the original features. Therefore, the two approaches are evaluated separately.
+
+The objective is to evaluate whether a lower-dimensional representation can reduce computational requirements while preserving battery capacity-estimation accuracy.
 
 # References and license
 

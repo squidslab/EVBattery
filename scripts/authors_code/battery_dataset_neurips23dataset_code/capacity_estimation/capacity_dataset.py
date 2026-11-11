@@ -89,6 +89,9 @@ class CapacityDataset:
         self.ind_car_num_list = ind_ood_car_dict['ind_sorted']
         self.ood_car_num_list = ind_ood_car_dict['ood_sorted']
 
+        self.sampling = sampling
+        self.seed = seed
+
         print(len(self.ind_car_num_list))
         print(len(self.ood_car_num_list))
 
@@ -121,19 +124,19 @@ class CapacityDataset:
                     capacity_valid_car_number.append(train1[1]["car"])
 
         # ===========================================================================
-        # SAMPLING: Randomly sample a percentage of the valid snippets if specified.
+        # SNIPPET SAMPLING: Randomly sample a percentage of the valid snippets if specified.
 
-        total_valid = len(self.battery_dataset)
+        # total_valid = len(self.battery_dataset)
 
         # print("Vehicles with valid capacity:", len(set(capacity_valid_car_number)))
         # print("Valid snippets before sampling:", total_valid)
 
-        rng = np.random.RandomState(seed)
+        # rng = np.random.RandomState(seed)
 
-        if sampling < 100 and total_valid > 0:
-            n_samples = max(1, int(total_valid * sampling / 100))
-            selected_indices = rng.choice(total_valid, size=n_samples, replace=False)
-            self.battery_dataset = [self.battery_dataset[i] for i in selected_indices]
+        # if sampling < 100 and total_valid > 0:
+        #     n_samples = max(1, int(total_valid * sampling / 100))
+        #     selected_indices = rng.choice(total_valid, size=n_samples, replace=False)
+        #     self.battery_dataset = [self.battery_dataset[i] for i in selected_indices]
 
         # print(f"Sampling: {sampling}%")
         # print(f"Valid snippets after sampling: {len(self.battery_dataset)}")
@@ -144,8 +147,18 @@ class CapacityDataset:
         return len(self.battery_dataset)
 
     def __getitem__(self, idx):
-        file = self.battery_dataset[idx]
-        return torch.load(file)
+        data, metadata = torch.load(self.battery_dataset[idx])
+
+        # ===========================================================================
+        # RECORD SAMPLING 
+        if self.sampling < 100:
+            n_records = max(1, int(data.shape[0] * self.sampling / 100))
+            rng = np.random.RandomState(self.seed + idx)
+            selected_indices = rng.choice(data.shape[0], size=n_records, replace=False)
+            selected_indices = np.sort(selected_indices)
+            data = data[selected_indices]
+        # ===========================================================================
+        return data, metadata
 
 class SlidingWindowDataset_forecast(torch.utils.data.Dataset):
     def __init__(self, data, window, target_dim=None, horizon=1):

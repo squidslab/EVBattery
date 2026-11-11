@@ -36,7 +36,8 @@ FEATURES = [
 ]
 
 def save_results(fold_num, model_name, sampling, results, selected_features=[], pca=False):
-    out_dir = Path("results") / model_name / ("pca" if pca else "no_pca") / f"sampling-{sampling}" / f"feature_sel_{len(selected_features)}"
+    out_dir = Path("results") / model_name #("pca" if pca else "no_pca") / 
+    out_dir = out_dir / "record-sampling" / f"sampling-{sampling}" # / f"feature_sel_{len(selected_features)}"
     out_dir.mkdir(parents=True, exist_ok=True)
     filename =  out_dir / f"results_fold_{fold_num}_{model_name}.txt"
     with open(filename, "w", encoding="utf-8") as f:
@@ -171,21 +172,16 @@ if __name__ == '__main__':
         with open(f"saved_dataset/test_dataset_{args.fold_num}.pkl", "rb") as f:
             test_dataset = pickle.load(f)
     else:
-        # used to fit normalizer and PCA on the full training fold dataset, sampling=100 is implied
-        train_full_pre = CapacityDataset(train=True, fold_num=args.fold_num)
-
         train_pre = CapacityDataset(train=True, fold_num=args.fold_num, sampling=args.sampling)
-        test_pre = CapacityDataset(train=False, fold_num=args.fold_num)
-
+        test_pre = CapacityDataset(train=False, fold_num=args.fold_num, sampling=args.sampling)
         normalizer = Normalizer(dfs=[train_pre[i][0] for i in range(200)],
                                      variable_length=False)
-        train_full_normalized = PreprocessNormalizer(train_full_pre, normalizer_fn=normalizer.norm_func)
         train_dataset = PreprocessNormalizer(train_pre, normalizer_fn=normalizer.norm_func)
         test_dataset = PreprocessNormalizer(test_pre, normalizer_fn=normalizer.norm_func)
 
         if args.pca:
             pca = fit_incremental_pca(
-                dataset=train_full_normalized,
+                dataset=train_dataset,
                 n_components=args.pca_components,
                 snippets_per_batch=args.pca_batch_snippets
             )
@@ -197,12 +193,9 @@ if __name__ == '__main__':
 
             print(f"PCA applicata. Input shape: (128, {args.pca_components})")
 
-        if not args.pca:
-            os.makedirs("saved_dataset", exist_ok=True)
-            with open(f"saved_dataset/train_dataset_fold_{args.fold_num}.pkl", "wb") as f:
-                pickle.dump(train_dataset, f)
-            with open(f"saved_dataset/test_dataset_{args.fold_num}.pkl", "wb") as f:
-                pickle.dump(test_dataset, f)
+        del train_pre
+        del test_pre
+        gc.collect()
 
     # LSTM
     if args.model == "LSTMNet":
@@ -292,7 +285,7 @@ if __name__ == '__main__':
 
     elif args.model == "XGBoost":
         # XGBoost
-        train_data = np.empty((len(train_dataset), 128 * len(selected_features)), dtype=np.float16)
+        train_data = np.empty((len(train_dataset), train_dataset[0][0].shape[0] * len(selected_features)), dtype=np.float16)
         train_labels = np.empty(len(train_dataset), dtype=np.float32)
 
         for i in range(len(train_dataset)):
@@ -327,7 +320,7 @@ if __name__ == '__main__':
         del train_labels
         gc.collect()
 
-        test_data = np.empty((len(test_dataset), 128 * len(selected_features)), dtype=np.float16)
+        test_data = np.empty((len(test_dataset), test_dataset[0][0].shape[0] * len(selected_features)), dtype=np.float16)
         test_labels = np.empty(len(test_dataset), dtype=np.float32)
 
         for i in range(len(test_dataset)):
@@ -397,7 +390,7 @@ if __name__ == '__main__':
     #     })
 
     elif args.model == "RandomForest":
-        train_data = np.empty((len(train_dataset), 128 * len(selected_features)), dtype=np.float16)
+        train_data = np.empty((len(train_dataset), train_dataset[0][0].shape[0] * len(selected_features)), dtype=np.float16)
         train_labels = np.empty(len(train_dataset), dtype=np.float32)
 
         for i in range(len(train_dataset)):
@@ -406,7 +399,7 @@ if __name__ == '__main__':
             train_data[i] = data[:, selected_features].reshape(-1)
             train_labels[i] = metadata['capacity']
 
-        test_data = np.empty((len(test_dataset), 128 * len(selected_features)), dtype=np.float16)
+        test_data = np.empty((len(test_dataset), test_dataset[0][0].shape[0] * len(selected_features)), dtype=np.float16)
         test_labels = np.empty(len(test_dataset), dtype=np.float32)
 
         for i in range(len(test_dataset)):

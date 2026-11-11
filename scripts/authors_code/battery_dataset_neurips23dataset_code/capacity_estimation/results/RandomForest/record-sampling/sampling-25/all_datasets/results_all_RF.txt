@@ -1,0 +1,15 @@
+========================================
+ALL BATTERY DATASETS - MODEL RandomForest
+========================================
+
+Record Sampling: 25%
+----------------------------------------
+
+Fold 0 -> Test RMSE: 1.8365
+Fold 1 -> Test RMSE: 1.8789
+Fold 2 -> Test RMSE: 1.9050
+Fold 3 -> Test RMSE: 1.8827
+Fold 4 -> Test RMSE: 1.9313
+
+========================================
+RMSE = 1.89 ± 0.03

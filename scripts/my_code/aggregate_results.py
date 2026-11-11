@@ -49,10 +49,7 @@ def main():
     parser = argparse.ArgumentParser(description="Aggrega i Test RMSE dei file results_fold_*.txt.")
     parser.add_argument(
         "--results-dir",
-        # default="sampling-1/",
-        # default="sampling-25/",
-        # default="sampling-50/",
-        default="pca/sampling-100/feature_sel_3/",
+        default="record-sampling/",
         help="Cartella contenente i file results_fold_*.txt",
     )
     parser.add_argument(
@@ -71,15 +68,15 @@ def main():
     )
     parser.add_argument(
         "--sampling",
-        # default="1%",
-        # default="25%",
-        # default="50%",
-        default="100%",
+        # default="1",
+        # default="25",
+        # default="50",
+        default="100",
         help="Percentuale di sampling da riportare nel riepilogo",
     )
     args = parser.parse_args()
 
-    source_dir = Path("../authors_code/battery_dataset_neurips23dataset_code/capacity_estimation/results") / args.model / args.results_dir
+    source_dir = Path("../authors_code/battery_dataset_neurips23dataset_code/capacity_estimation/results") / args.model / args.results_dir / f"sampling-{args.sampling}"
     
     if not source_dir.is_dir():
         raise SystemExit(f"Cartella non trovata: {source_dir}")
@@ -133,10 +130,10 @@ def main():
         f"{args.dataset} - MODEL {args.model}",
         "=" * 40,
         "",
-        f"Sampling: {args.sampling}",
+        f"Record Sampling: {args.sampling}%",
         # "",
         # "Feature Selection:",
-        "PCA: Yes"
+        # "PCA: Yes"
     ]
 
     # for i, selected_feature in enumerate(selected_features):
