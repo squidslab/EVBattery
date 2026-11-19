@@ -37,7 +37,7 @@ FEATURES = [
 
 def save_results(fold_num, model_name, sampling, results, selected_features=[], pca=False):
     out_dir = Path("results") / model_name #("pca" if pca else "no_pca") / 
-    out_dir = out_dir / "record-sampling" / f"sampling-{sampling}" # / f"feature_sel_{len(selected_features)}"
+    out_dir = out_dir / "embeddings" #"record-sampling" / f"sampling-{sampling}" # / f"feature_sel_{len(selected_features)}"
     out_dir.mkdir(parents=True, exist_ok=True)
     filename =  out_dir / f"results_fold_{fold_num}_{model_name}.txt"
     with open(filename, "w", encoding="utf-8") as f:
@@ -127,36 +127,12 @@ if __name__ == '__main__':
     parser.add_argument('--pca', type=bool, default=False)
     parser.add_argument('--pca_components', type=int, default=3)
     parser.add_argument('--pca_batch_snippets', type=int, default=256)
+    parser.add_argument('--use_embeddings', action='store_true')
     parser.add_argument('--load_saved_dataset', action='store_true')
-
 
     args = parser.parse_args()
 
     print("args", args)
-
-    # load dataset
-    # if args.load_saved_dataset:
-    #     with open(f'saved_dataset/train_dataset_fold_{args.fold_num}.pkl', 'rb') as f:
-    #         train_dataset = pickle.load(f)
-    #     with open(f'saved_dataset/test_dataset_{args.fold_num}.pkl', 'rb') as f:
-    #         test_dataset = pickle.load(f)
-    # else:
-    #     train_pre = CapacityDataset(train=True, fold_num=args.fold_num)
-    #     test_pre = CapacityDataset(train=False, fold_num=args.fold_num)
-
-    #     normalizer = Normalizer(dfs=[train_pre[i][0] for i in range(200)],
-    #                                  variable_length=False)
-    #     train_dataset = PreprocessNormalizer(train_pre, normalizer_fn=normalizer.norm_func)
-    #     test_dataset = PreprocessNormalizer(test_pre, normalizer_fn=normalizer.norm_func)
-    #     os.makedirs("saved_dataset", exist_ok=True)
-    #     with open(f'saved_dataset/train_dataset_fold_{args.fold_num}.pkl', 'wb') as f:
-    #         pickle.dump(train_dataset, f)
-    #     with open(f'saved_dataset/test_dataset_{args.fold_num}.pkl', 'wb') as f:
-    #         pickle.dump(test_dataset, f)
-
-    # ================================================================
-    # Load dataset + optional PCA
-    # ================================================================
 
     selected_features = list(range(len(FEATURES)))
 
@@ -166,36 +142,39 @@ if __name__ == '__main__':
     if args.pca and args.feature_selection:
         raise ValueError("PCA and feature selection cannot be used together.")
 
-    if args.load_saved_dataset:
-        with open(f"saved_dataset/train_dataset_fold_{args.fold_num}.pkl", "rb") as f:
-            train_dataset = pickle.load(f)
-        with open(f"saved_dataset/test_dataset_{args.fold_num}.pkl", "rb") as f:
-            test_dataset = pickle.load(f)
+    if args.use_embeddings:
+        print("Using embeddings for graph structure.")
     else:
-        train_pre = CapacityDataset(train=True, fold_num=args.fold_num, sampling=args.sampling)
-        test_pre = CapacityDataset(train=False, fold_num=args.fold_num, sampling=args.sampling)
-        normalizer = Normalizer(dfs=[train_pre[i][0] for i in range(200)],
-                                     variable_length=False)
-        train_dataset = PreprocessNormalizer(train_pre, normalizer_fn=normalizer.norm_func)
-        test_dataset = PreprocessNormalizer(test_pre, normalizer_fn=normalizer.norm_func)
+        if args.load_saved_dataset:
+            with open(f"saved_dataset/train_dataset_fold_{args.fold_num}.pkl", "rb") as f:
+                train_dataset = pickle.load(f)
+            with open(f"saved_dataset/test_dataset_{args.fold_num}.pkl", "rb") as f:
+                test_dataset = pickle.load(f)
+        else:
+            train_pre = CapacityDataset(train=True, fold_num=args.fold_num, sampling=args.sampling)
+            test_pre = CapacityDataset(train=False, fold_num=args.fold_num, sampling=args.sampling)
+            normalizer = Normalizer(dfs=[train_pre[i][0] for i in range(200)],
+                                        variable_length=False)
+            train_dataset = PreprocessNormalizer(train_pre, normalizer_fn=normalizer.norm_func)
+            test_dataset = PreprocessNormalizer(test_pre, normalizer_fn=normalizer.norm_func)
 
-        if args.pca:
-            pca = fit_incremental_pca(
-                dataset=train_dataset,
-                n_components=args.pca_components,
-                snippets_per_batch=args.pca_batch_snippets
-            )
+            if args.pca:
+                pca = fit_incremental_pca(
+                    dataset=train_dataset,
+                    n_components=args.pca_components,
+                    snippets_per_batch=args.pca_batch_snippets
+                )
 
-            train_dataset = PCATransformDataset(train_dataset, pca)
-            test_dataset = PCATransformDataset(test_dataset, pca)
+                train_dataset = PCATransformDataset(train_dataset, pca)
+                test_dataset = PCATransformDataset(test_dataset, pca)
 
-            selected_features = list(range(args.pca_components))
+                selected_features = list(range(args.pca_components))
 
-            print(f"PCA applicata. Input shape: (128, {args.pca_components})")
+                print(f"PCA applicata. Input shape: (128, {args.pca_components})")
 
-        del train_pre
-        del test_pre
-        gc.collect()
+            del train_pre
+            del test_pre
+            gc.collect()
 
     # LSTM
     if args.model == "LSTMNet":
@@ -245,70 +224,49 @@ if __name__ == '__main__':
             "Final Test Loss": final_test_loss
         }, selected_features, args.pca)
 
-    # elif args.model == "XGBoost":
-    #     # XGBoost
-    #     train_data_list = [train_dataset.__getitem__(i)[0] for i in range(len(train_dataset))]
-    #     train_labels_list = [train_dataset.__getitem__(i)[1]['capacity'] for i in range(len(train_dataset))]
-    #     train_data = np.array(train_data_list).reshape(len(train_data_list), -1)
-    #     train_labels = np.array(train_labels_list)
-
-    #     test_data_list = [test_dataset.__getitem__(i)[0] for i in range(len(test_dataset))]
-    #     test_labels_list = [test_dataset.__getitem__(i)[1]['capacity'] for i in range(len(test_dataset))]
-    #     test_data = np.array(test_data_list).reshape(len(test_data_list), -1)
-    #     test_labels = np.array(test_labels_list)
-
-    #     print(train_data.shape, test_data.shape)
-
-    #     dtrain = xgb.DMatrix(train_data, label=train_labels)
-    #     dtest = xgb.DMatrix(test_data, label=test_labels)
-
-    #     params = {
-    #         'objective': 'reg:squarederror',
-    #         'eta': 0.1,
-    #         'max_depth': 4,
-    #         'eval_metric': 'rmse'
-    #     }
-
-    #     num_rounds = args.num_epochs
-    #     model = xgb.train(params, dtrain, num_rounds)
-
-    #     train_predictions = model.predict(dtrain)
-    #     test_predictions = model.predict(dtest)
-
-    #     print("Train RMSE:", np.sqrt(np.mean((train_predictions - train_labels) ** 2)))
-    #     print("Test RMSE:", np.sqrt(np.mean((test_predictions - test_labels) ** 2)))
-
-    #     save_results(args.fold_num, args.model, {
-    #         "Train RMSE": np.sqrt(np.mean((train_predictions - train_labels) ** 2)),
-    #         "Test RMSE": np.sqrt(np.mean((test_predictions - test_labels) ** 2))
-    #     })
-
     elif args.model == "XGBoost":
-        # XGBoost
-        train_data = np.empty((len(train_dataset), train_dataset[0][0].shape[0] * len(selected_features)), dtype=np.float16)
-        train_labels = np.empty(len(train_dataset), dtype=np.float32)
 
-        for i in range(len(train_dataset)):
-            data, metadata = train_dataset[i]
+        if args.use_embeddings:
+            embedding_dir = (Path("embeddings") / "dataset2" / f"fold_{args.fold_num}")
 
-            train_data[i] = data[:, selected_features].reshape(-1)
-            train_labels[i] = metadata['capacity']
+            train_data = np.load(embedding_dir / "train_embeddings.npy", mmap_mode="r")
+            train_labels = np.load(embedding_dir / "train_labels.npy")
+
+            test_data = np.load(embedding_dir / "test_embeddings.npy", mmap_mode="r")
+            test_labels = np.load(embedding_dir / "test_labels.npy")
+        
+        else:
+            train_data = np.empty((len(train_dataset), train_dataset[0][0].shape[0] * len(selected_features)), dtype=np.float16)
+            train_labels = np.empty(len(train_dataset), dtype=np.float32)
+
+            for i in range(len(train_dataset)):
+                data, metadata = train_dataset[i]
+
+                train_data[i] = data[:, selected_features].reshape(-1)
+                train_labels[i] = metadata['capacity']
+
+            test_data = np.empty((len(test_dataset), test_dataset[0][0].shape[0] * len(selected_features)), dtype=np.float16)
+            test_labels = np.empty(len(test_dataset), dtype=np.float32)
+
+            for i in range(len(test_dataset)):
+                data, metadata = test_dataset[i]
+
+                test_data[i] = data[:, selected_features].reshape(-1)
+                test_labels[i] = metadata['capacity']
 
         dtrain = xgb.DMatrix(train_data, label=train_labels)
-
         del train_data
         gc.collect()
-
+        
         params = {
             'objective': 'reg:squarederror',
             'eta': 0.1,
             'max_depth': 4,
             'eval_metric': 'rmse',
-            'tree_method': 'hist', 
-            'max_bin': 64, 
+            'tree_method': 'hist',
+            'max_bin': 64,
             'nthread': 2
         }
-
         num_rounds = args.num_epochs
         model = xgb.train(params, dtrain, num_rounds)
 
@@ -320,17 +278,7 @@ if __name__ == '__main__':
         del train_labels
         gc.collect()
 
-        test_data = np.empty((len(test_dataset), test_dataset[0][0].shape[0] * len(selected_features)), dtype=np.float16)
-        test_labels = np.empty(len(test_dataset), dtype=np.float32)
-
-        for i in range(len(test_dataset)):
-            data, metadata = test_dataset[i]
-
-            test_data[i] = data[:, selected_features].reshape(-1)
-            test_labels[i] = metadata['capacity']
-
         dtest = xgb.DMatrix(test_data, label=test_labels)
-
         del test_data
         gc.collect()
 
@@ -361,52 +309,35 @@ if __name__ == '__main__':
 
         print("Test RMSE:", np.sqrt(np.mean((test_predictions - test_labels) ** 2)))
 
-    # elif args.model == "RandomForest":
-    #     train_data_list = [train_dataset.__getitem__(i)[0] for i in range(len(train_dataset))]
-    #     train_labels_list = [train_dataset.__getitem__(i)[1]['capacity'] for i in range(len(train_dataset))]
-    #     train_data = np.array(train_data_list).reshape(len(train_data_list), -1)
-    #     train_labels = np.array(train_labels_list)
-
-    #     test_data_list = [test_dataset.__getitem__(i)[0] for i in range(len(test_dataset))]
-    #     test_labels_list = [test_dataset.__getitem__(i)[1]['capacity'] for i in range(len(test_dataset))]
-    #     test_data = np.array(test_data_list).reshape(len(test_data_list), -1)
-    #     test_labels = np.array(test_labels_list)
-
-    #     model = RandomForestRegressor(n_estimators=10, random_state=0, n_jobs=10, max_depth=4)
-
-    #     model.fit(train_data, train_labels)
-
-    #     train_predictions = model.predict(train_data)
-    #     train_rmse = np.sqrt(mean_squared_error(train_labels, train_predictions))
-    #     print("Train RMSE:", train_rmse)
-
-    #     test_predictions = model.predict(test_data)
-    #     test_rmse = np.sqrt(mean_squared_error(test_labels, test_predictions))
-    #     print("Test RMSE:", test_rmse)
-
-    #     save_results(args.fold_num, args.model, {
-    #         "Train RMSE": train_rmse,
-    #         "Test RMSE": test_rmse
-    #     })
-
     elif args.model == "RandomForest":
-        train_data = np.empty((len(train_dataset), train_dataset[0][0].shape[0] * len(selected_features)), dtype=np.float16)
-        train_labels = np.empty(len(train_dataset), dtype=np.float32)
 
-        for i in range(len(train_dataset)):
-            data, metadata = train_dataset[i]
+        if args.use_embeddings:
+            embedding_dir = (Path("embeddings") / "dataset2" / f"fold_{args.fold_num}")
 
-            train_data[i] = data[:, selected_features].reshape(-1)
-            train_labels[i] = metadata['capacity']
+            train_data = np.load(embedding_dir / "train_embeddings.npy", mmap_mode="r")
+            train_labels = np.load(embedding_dir / "train_labels.npy")
 
-        test_data = np.empty((len(test_dataset), test_dataset[0][0].shape[0] * len(selected_features)), dtype=np.float16)
-        test_labels = np.empty(len(test_dataset), dtype=np.float32)
+            test_data = np.load(embedding_dir / "test_embeddings.npy", mmap_mode="r")
+            test_labels = np.load(embedding_dir / "test_labels.npy")
 
-        for i in range(len(test_dataset)):
-            data, metadata = test_dataset[i]
+        else:
+            train_data = np.empty((len(train_dataset), train_dataset[0][0].shape[0] * len(selected_features)), dtype=np.float16)
+            train_labels = np.empty(len(train_dataset), dtype=np.float32)
 
-            test_data[i] = data[:, selected_features].reshape(-1)
-            test_labels[i] = metadata['capacity']
+            for i in range(len(train_dataset)):
+                data, metadata = train_dataset[i]
+
+                train_data[i] = data[:, selected_features].reshape(-1)
+                train_labels[i] = metadata['capacity']
+
+            test_data = np.empty((len(test_dataset), test_dataset[0][0].shape[0] * len(selected_features)), dtype=np.float16)
+            test_labels = np.empty(len(test_dataset), dtype=np.float32)
+
+            for i in range(len(test_dataset)):
+                data, metadata = test_dataset[i]
+
+                test_data[i] = data[:, selected_features].reshape(-1)
+                test_labels[i] = metadata['capacity']
 
         model = RandomForestRegressor(n_estimators=10, random_state=0, n_jobs=10, max_depth=4)
 

@@ -1,6 +1,0 @@
-Fold: 1
-Model: XGBoost
-Sampling: 1%
-========================================
-Train RMSE: 1.6769
-Test RMSE: 1.8144

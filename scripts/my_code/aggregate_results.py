@@ -49,7 +49,7 @@ def main():
     parser = argparse.ArgumentParser(description="Aggrega i Test RMSE dei file results_fold_*.txt.")
     parser.add_argument(
         "--results-dir",
-        default="record-sampling/",
+        default="embeddings/",
         help="Cartella contenente i file results_fold_*.txt",
     )
     parser.add_argument(
