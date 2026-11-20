@@ -244,15 +244,15 @@ Expected path is similar to:
 
 ### Core dependencies used by `my_code`
 
-As it's used just numpy, you can simply write with your env activated:
+You can install the required dependencies with your virtual environment activated:
 
 ```bash
-pip install numpy
+pip install numpy pandas matplotlib
 ```
 ---
 ### Core dependencies used by `capacity_estimation`
 
-You can install the exact versions used during with:
+You can install the exact versions used by original authors with:
 
 ```bash
 pip install -r requirements.txt
