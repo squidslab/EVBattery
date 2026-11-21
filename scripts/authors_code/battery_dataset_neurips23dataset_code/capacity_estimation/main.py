@@ -224,10 +224,10 @@ if __name__ == '__main__':
             "Final Test Loss": final_test_loss
         }, selected_features, args.pca)
 
+    # XGBoost
     elif args.model == "XGBoost":
-
         if args.use_embeddings:
-            embedding_dir = (Path("embeddings") / "dataset2" / f"fold_{args.fold_num}")
+            embedding_dir = (Path("embeddings") / "all_datasets" / f"fold_{args.fold_num}")
 
             train_data = np.load(embedding_dir / "train_embeddings.npy", mmap_mode="r")
             train_labels = np.load(embedding_dir / "train_labels.npy")
@@ -293,6 +293,7 @@ if __name__ == '__main__':
             "Test RMSE": test_rmse
         }, selected_features, args.pca)
 
+    # MEAN
     elif args.model == "MEAN":
         train_data_list = [train_dataset.__getitem__(i)[0] for i in range(len(train_dataset))]
         train_labels_list = [train_dataset.__getitem__(i)[1]['capacity'] for i in range(len(train_dataset))]
@@ -309,10 +310,10 @@ if __name__ == '__main__':
 
         print("Test RMSE:", np.sqrt(np.mean((test_predictions - test_labels) ** 2)))
 
+    # Random Forest
     elif args.model == "RandomForest":
-
         if args.use_embeddings:
-            embedding_dir = (Path("embeddings") / "dataset2" / f"fold_{args.fold_num}")
+            embedding_dir = (Path("embeddings") / "all_datasets" / f"fold_{args.fold_num}")
 
             train_data = np.load(embedding_dir / "train_embeddings.npy", mmap_mode="r")
             train_labels = np.load(embedding_dir / "train_labels.npy")
@@ -356,6 +357,7 @@ if __name__ == '__main__':
             "Test RMSE": test_rmse
         }, selected_features, args.pca)
 
+    # MLP
     elif args.model == "MLP":
         model = MLP(input_dim=128*8, hidden_dim=32, output_dim=1) # .cuda()
         optimizer = optim.Adam(model.parameters(), lr=0.001)
@@ -393,6 +395,7 @@ if __name__ == '__main__':
             print(
                 'Epoch [{}/{}], Test Loss: {:.4f}'.format(epoch + 1, args.num_epochs, test_loss / len(test_dataset)))
 
+    # GatedCNN
     elif args.model == "GatedCNN":
         model = GatedCNN(seq_len=128,
                          n_layers=4,

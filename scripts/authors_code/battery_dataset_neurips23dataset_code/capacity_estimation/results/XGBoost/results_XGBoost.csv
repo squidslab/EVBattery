@@ -16,4 +16,4 @@ XGBoost,PCA,,,3,96,Dataset 2,1.40,0.13,0.72,62.5,248.06
 XGBoost,PCA,,,3,96,All datasets,1.86,0.06,5.08,62.5,715.24
 XGBoost,embedding_TSPulse,,,,,Dataset 1,1.84,0.05,6.98,62.5,426.93
 XGBoost,embedding_TSPulse,,,,,Dataset 2,1.46,0.13,5.04,62.5,248.06
-XGBoost,embedding_TSPulse,,,,,All datasets,,,,62.5,715.24
+XGBoost,embedding_TSPulse,,,,,All datasets,1.75,0.12,-1.13,62.5,715.24

@@ -163,7 +163,7 @@ def main():
     parser.add_argument("--fold_num", type=int, default=0)
     parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--out_root", type=str, default="embeddings")
-    parser.add_argument("--dataset_name", type=str, default="dataset2")
+    parser.add_argument("--dataset_name", type=str, default="all_datasets")
     parser.add_argument("--max_samples", type=int, default=0)
     args = parser.parse_args()
     print("Arguments:", args)
