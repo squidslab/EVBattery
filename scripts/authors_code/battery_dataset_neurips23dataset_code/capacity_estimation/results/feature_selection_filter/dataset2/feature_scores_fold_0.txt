@@ -1,0 +1,23 @@
+Pearson e Mutual Information - EVBattery
+Fold: 0
+Snippet analizzati: 152536
+
+Ranking Pearson (media |r| sui 128 timestep):
+1. maximum_temperature: 0.25840396 (mediana |r|: 0.25846654)
+2. minimum_temperature: 0.25346658 (mediana |r|: 0.25350398)
+3. charging_current: 0.18540850 (mediana |r|: 0.18557360)
+4. average_cell_voltage: 0.06341962 (mediana |r|: 0.06353939)
+5. maximum_cell_voltage: 0.06291590 (mediana |r|: 0.06301732)
+6. minimum_cell_voltage: 0.05234740 (mediana |r|: 0.05245163)
+7. state_of_charge: 0.04187534 (mediana |r|: 0.04185202)
+8. timestamp: 0.00000107 (mediana |r|: 0.00000070)
+
+Ranking Mutual Information (media sui 128 timestep):
+1. minimum_temperature: 1.87775194 (mediana: 1.87357526)
+2. maximum_temperature: 1.80861337 (mediana: 1.80438661)
+3. charging_current: 0.48351702 (mediana: 0.48371995)
+4. state_of_charge: 0.02894005 (mediana: 0.02894771)
+5. minimum_cell_voltage: 0.01734295 (mediana: 0.01715819)
+6. maximum_cell_voltage: 0.01709871 (mediana: 0.01658511)
+7. average_cell_voltage: 0.01569199 (mediana: 0.01528549)
+8. timestamp: 0.00000000 (mediana: 0.00000000)

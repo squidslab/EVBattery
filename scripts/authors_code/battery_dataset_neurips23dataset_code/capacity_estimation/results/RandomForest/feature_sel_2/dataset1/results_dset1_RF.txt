@@ -1,0 +1,19 @@
+========================================
+BATTERY DATASET 1 - MODEL RandomForest
+========================================
+
+Record Sampling: 100%
+
+Feature Selection:
+    Feature 0: maximum_temperature
+    Feature 1: minimum_temperature
+----------------------------------------
+
+Fold 0 -> Test RMSE: 1.6898
+Fold 1 -> Test RMSE: 1.7588
+Fold 2 -> Test RMSE: 1.7312
+Fold 3 -> Test RMSE: 1.7943
+Fold 4 -> Test RMSE: 1.8955
+
+========================================
+RMSE = 1.77 ± 0.07

@@ -1,0 +1,9 @@
+Fold: 1
+Model: XGBoost
+Sampling: 100%
+Feature Selection:
+  Feature 0: minimum_temperature
+  Feature 1: timestamp
+========================================
+Train RMSE: 1.9164
+Test RMSE: 1.9518

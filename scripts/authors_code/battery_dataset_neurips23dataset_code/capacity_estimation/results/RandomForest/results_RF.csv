@@ -8,6 +8,9 @@ Random Forest,record_sampling,25.0,,,,All datasets,1.89,0.03,0.00,75,858.29
 Random Forest,record_sampling,50.0,,,,Dataset 1,1.78,0.07,0.00,50,341.55
 Random Forest,record_sampling,50.0,,,,Dataset 2,1.43,0.11,0.00,50,198.45
 Random Forest,record_sampling,50.0,,,,All datasets,1.89,0.03,0.00,50,572.19
+Random Forest,feature_selection,,2,,,Dataset 1,1.77,0.07,-0.56,75,512.32
+Random Forest,feature_selection,,2,,,Dataset 2,1.47,0.16,2.80,75,297.67
+Random Forest,feature_selection,,2,,,All datasets,1.93,0.03,2.12,75,858.29
 Random Forest,feature_selection,,5,,,Dataset 1,1.78,0.07,0.00,37.5,256.16
 Random Forest,feature_selection,,5,,,Dataset 2,1.43,0.11,0.00,37.5,148.83
 Random Forest,feature_selection,,5,,,All datasets,1.88,0.04,-0.53,37.5,429.14

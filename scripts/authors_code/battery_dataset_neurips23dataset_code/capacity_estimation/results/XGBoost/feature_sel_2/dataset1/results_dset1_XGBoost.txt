@@ -1,0 +1,19 @@
+========================================
+BATTERY DATASET 1 - MODEL XGBoost
+========================================
+
+Record Sampling: 100%
+
+Feature Selection:
+    Feature 0: maximum_temperature
+    Feature 1: minimum_temperature
+----------------------------------------
+
+Fold 0 -> Test RMSE: 1.7148
+Fold 1 -> Test RMSE: 1.7752
+Fold 2 -> Test RMSE: 1.7269
+Fold 3 -> Test RMSE: 1.8092
+Fold 4 -> Test RMSE: 1.8983
+
+========================================
+RMSE = 1.78 ± 0.07

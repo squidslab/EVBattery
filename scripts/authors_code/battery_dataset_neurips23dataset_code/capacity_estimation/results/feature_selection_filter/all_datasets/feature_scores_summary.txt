@@ -1,0 +1,21 @@
+RIEPILOGO FEATURE SELECTION - 5 fold - ALL DATASETS
+
+Ranking Pearson (media degli score sui fold):
+1. minimum_temperature: 0.25426376 +/- 0.01832170
+2. maximum_temperature: 0.24424288 +/- 0.01783756
+3. charging_current: 0.16129453 +/- 0.01606087
+4. state_of_charge: 0.09455567 +/- 0.01204313
+5. maximum_cell_voltage: 0.06100079 +/- 0.01166078
+6. minimum_cell_voltage: 0.05999665 +/- 0.01134380
+7. average_cell_voltage: 0.05274746 +/- 0.01142588
+8. timestamp: 0.00000289 +/- 0.00000133
+
+Ranking Mutual Information (media degli score sui fold):
+1. minimum_temperature: 2.02379438 +/- 0.00616717
+2. maximum_temperature: 1.94079911 +/- 0.00436334
+3. charging_current: 0.58372840 +/- 0.01492973
+4. average_cell_voltage: 0.11770091 +/- 0.01700061
+5. state_of_charge: 0.11712048 +/- 0.01254841
+6. minimum_cell_voltage: 0.11492736 +/- 0.01844195
+7. maximum_cell_voltage: 0.10948286 +/- 0.01634294
+8. timestamp: 0.00000000 +/- 0.00000000

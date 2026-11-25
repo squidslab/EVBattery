@@ -8,6 +8,9 @@ LSTMNet,record_sampling,25,,,,All datasets,1.72,0.05,0.00,75,1716.57
 LSTMNet,record_sampling,50,,,,Dataset 1,1.69,0.09,0.00,50,683.09
 LSTMNet,record_sampling,50,,,,Dataset 2,1.40,0.10,0.00,50,396.89
 LSTMNet,record_sampling,50,,,,All datasets,1.71,0.08,-0.58,50,1144.38
+LSTMNet,feature_selection,,2,,,Dataset 1,1.78,0.07,5.33,75,1024.63
+LSTMNet,feature_selection,,2,,,Dataset 2,1.48,0.16,5.71,75,595.33
+LSTMNet,feature_selection,,2,,,All datasets,1.93,0.03,12.21,75,1716.57
 LSTMNet,feature_selection,,5,,,Dataset 1,1.70,0.07,0.59,37.5,512.32
 LSTMNet,feature_selection,,5,,,Dataset 2,1.41,0.15,0.71,37.5,297.67
 LSTMNet,feature_selection,,5,,,All datasets,1.74,0.03,1.16,37.5,858.28
@@ -23,6 +26,9 @@ XGBoost,record_sampling,25,,,,All datasets,1.78,0.06,0.56,75,858.29
 XGBoost,record_sampling,50,,,,Dataset 1,1.72,0.06,0.00,50,341.55
 XGBoost,record_sampling,50,,,,Dataset 2,1.38,0.14,-0.72,50,198.45
 XGBoost,record_sampling,50,,,,All datasets,1.78,0.06,0.56,50,572.19
+XGBoost,feature_selection,,2,,,Dataset 1,1.78,0.07,3.49,75,512.32
+XGBoost,feature_selection,,2,,,Dataset 2,1.48,0.17,6.47,75,297.67
+XGBoost,feature_selection,,2,,,All datasets,1.93,0.04,9.04,75,858.29
 XGBoost,feature_selection,,5,,,Dataset 1,1.73,0.06,0.58,37.5,256.16
 XGBoost,feature_selection,,5,,,Dataset 2,1.39,0.13,0.00,37.5,148.83
 XGBoost,feature_selection,,5,,,All datasets,1.78,0.06,0.56,37.5,429.14
@@ -41,6 +47,9 @@ Random Forest,record_sampling,25.0,,,,All datasets,1.89,0.03,0.00,75,858.29
 Random Forest,record_sampling,50.0,,,,Dataset 1,1.78,0.07,0.00,50,341.55
 Random Forest,record_sampling,50.0,,,,Dataset 2,1.43,0.11,0.00,50,198.45
 Random Forest,record_sampling,50.0,,,,All datasets,1.89,0.03,0.00,50,572.19
+Random Forest,feature_selection,,2,,,Dataset 1,1.77,0.07,-0.56,75,512.32
+Random Forest,feature_selection,,2,,,Dataset 2,1.47,0.16,2.80,75,297.67
+Random Forest,feature_selection,,2,,,All datasets,1.93,0.03,2.12,75,858.29
 Random Forest,feature_selection,,5,,,Dataset 1,1.78,0.07,0.00,37.5,256.16
 Random Forest,feature_selection,,5,,,Dataset 2,1.43,0.11,0.00,37.5,148.83
 Random Forest,feature_selection,,5,,,All datasets,1.88,0.04,-0.53,37.5,429.14

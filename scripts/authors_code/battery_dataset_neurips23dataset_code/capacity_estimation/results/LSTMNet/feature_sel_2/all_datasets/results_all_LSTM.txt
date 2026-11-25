@@ -1,0 +1,19 @@
+========================================
+ALL BATTERY DATASETS - MODEL LSTMNet
+========================================
+
+Record Sampling: 100%
+
+Feature Selection:
+    Feature 0: maximum_temperature
+    Feature 1: minimum_temperature
+----------------------------------------
+
+Fold 0 -> Test RMSE: 1.8674
+Fold 1 -> Test RMSE: 1.9455
+Fold 2 -> Test RMSE: 1.9457
+Fold 3 -> Test RMSE: 1.9672
+Fold 4 -> Test RMSE: 1.9428
+
+========================================
+RMSE = 1.93 ± 0.03

@@ -1,0 +1,9 @@
+Fold: 0
+Model: LSTMNet
+Sampling: 100%
+Feature Selection:
+  Feature 0: minimum_temperature
+  Feature 1: timestamp
+========================================
+Final Train Loss: 3.2266
+Final Test Loss: 2.8467

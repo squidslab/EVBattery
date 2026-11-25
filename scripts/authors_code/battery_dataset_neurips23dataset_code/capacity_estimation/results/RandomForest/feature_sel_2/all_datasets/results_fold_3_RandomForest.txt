@@ -1,0 +1,9 @@
+Fold: 3
+Model: RandomForest
+Sampling: 100%
+Feature Selection:
+  Feature 0: minimum_temperature
+  Feature 1: timestamp
+========================================
+Train RMSE: 1.9026
+Test RMSE: 1.9632
