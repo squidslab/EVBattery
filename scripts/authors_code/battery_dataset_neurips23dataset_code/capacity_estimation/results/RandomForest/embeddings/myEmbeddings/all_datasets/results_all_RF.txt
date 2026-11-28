@@ -1,0 +1,22 @@
+========================================
+ALL BATTERY DATASETS - MODEL RandomForest
+========================================
+PARAMS:
+    n_estimators = 10
+    random_state = 0
+    n_jobs = 10
+    max_depth = 4
+----------------------------------------
+Record Sampling: 100%
+
+num_epochs for embedding = 10
+----------------------------------------
+
+Fold 0 -> Test RMSE: 1.5971
+Fold 1 -> Test RMSE: 1.7421
+Fold 2 -> Test RMSE: 1.6818
+Fold 3 -> Test RMSE: 1.6991
+Fold 4 -> Test RMSE: 1.7819
+
+========================================
+RMSE = 1.70 ± 0.06

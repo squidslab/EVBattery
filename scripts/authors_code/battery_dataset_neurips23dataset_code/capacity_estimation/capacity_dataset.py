@@ -55,24 +55,26 @@ class CapacityDataset:
 
         # Store only paths, not the loaded PKL objects.
         self.battery_dataset = []
+        self.capacities = []
         print('car_number is ', car_number)
         capacity_valid_car_number = []
         print("Loading data...")
 
         for each_num in tqdm(car_number):
             for each_pkl in self.all_car_dict[each_num]:
-                # train1 = torch.load(each_pkl) # depending on the python version 
-                train1 = torch.load(each_pkl, map_location=torch.device('cpu'), weights_only=False)
+                train1 = torch.load(each_pkl) # depending on the python version 
+                # train1 = torch.load(each_pkl, map_location=torch.device('cpu'), weights_only=False)
                 if train1[1]["capacity"] != 0:
                     self.battery_dataset.append(each_pkl)
+                    self.capacities.append(float(train1[1]["capacity"]))
                     capacity_valid_car_number.append(train1[1]["car"])
 
     def __len__(self):
         return len(self.battery_dataset)
 
     def __getitem__(self, idx):
-        # data, metadata = torch.load(self.battery_dataset[idx]) # depending on the python version
-        data, metadata = torch.load(self.battery_dataset[idx], map_location=torch.device('cpu'), weights_only=False)
+        data, metadata = torch.load(self.battery_dataset[idx]) # depending on the python version
+        # data, metadata = torch.load(self.battery_dataset[idx], map_location=torch.device('cpu'), weights_only=False)
 
         # ===========================================================================
         # RECORD SAMPLING 

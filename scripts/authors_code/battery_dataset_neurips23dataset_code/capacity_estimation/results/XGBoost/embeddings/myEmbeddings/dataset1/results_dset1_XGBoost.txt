@@ -1,0 +1,24 @@
+========================================
+BATTERY DATASET 1 - MODEL XGBoost
+========================================
+PARAMS:
+    num_rounds = 50
+    eta = 0.1
+    max_depth = 4
+    tree_method = hist
+    max_bin = 64
+    nthread = 2 
+----------------------------------------
+Record Sampling: 100%
+
+num_epochs for embedding = 10
+----------------------------------------
+
+Fold 0 -> Test RMSE: 1.5100
+Fold 1 -> Test RMSE: 1.6072
+Fold 2 -> Test RMSE: 1.6382
+Fold 3 -> Test RMSE: 1.5445
+Fold 4 -> Test RMSE: 1.6582
+
+========================================
+RMSE = 1.59 ± 0.06

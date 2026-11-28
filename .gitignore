@@ -51,7 +51,7 @@ htmlcov/
 granite-tsfm/
 
 # Cached/embeddings
-/scripts/authors_code/**/capacity_estimation/embeddings/
+/scripts/authors_code/**/capacity_estimation/saved_embeddings/
 
 # Cached/generated datasets
 /scripts/authors_code/**/capacity_estimation/saved_dataset/
